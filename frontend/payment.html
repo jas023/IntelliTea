@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IntelliTea - Payment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#709c16",
+                        "brand-dark": "#355e3b",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#1c2111",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative min-h-screen w-full flex flex-col max-w-md mx-auto bg-white dark:bg-background-dark shadow-2xl overflow-hidden">
+<!-- Background Overlay Pattern -->
+<div class="absolute inset-0 z-0 opacity-10 pointer-events-none" data-alt="Soft green tea leaves background pattern" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCI2-wJ8xWr0nruvpSrfCQPiXlMB91uYO0-sN-gjQ6Zkmg8G9TBfy8AR90EsnP8OWdKVzqAawhpFtj1eeVDb637sb4ER6r91H_ZdFABwIxGz47kpl38ry7PP_pIWMWSrAz8p2FXS1vpuiLRlTAIyfrwBaK0UNa_AzRmzboqQf6YleY1RCDQJ3kgLJJ4ljbL4pYg_lY1iItsvV_0D-NiZkjfIhYpyWyIMYG0Paj5sv7mn6cUvf1npjrcZ0WIEFxFIVzbywhtBIS-EYU'); background-size: cover;">
+</div>
+<!-- Header -->
+<header class="relative z-10 flex items-center p-4 gap-4 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10">
+<button onclick="window.history.back()" class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-brand-dark dark:text-primary">arrow_back</span>
+</button>
+<div class="flex items-center gap-2">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm">energy_savings_leaf</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-brand-dark dark:text-slate-100">IntelliTea</h1>
+</div>
+</header>
+<main class="relative z-10 flex-1 overflow-y-auto p-4 space-y-6 pb-8"><!-- Total Amount Display -->
+<section class="text-center py-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/10 mb-6">
+<p class="text-sm font-bold uppercase tracking-widest text-brand-dark dark:text-primary mb-1">Total Amount to Pay</p>
+<h2 id="total-amount" class="text-4xl font-extrabold text-brand-dark dark:text-slate-100">₹0</h2>
+</section>
+<!-- QR Code Section -->
+<section class="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-primary/30 shadow-sm mb-6">
+<div class="size-48 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center relative overflow-hidden"><!-- PASTE YOUR QR CODE IMAGE URL IN THE SRC ATTRIBUTE BELOW -->
+<img id="qr-image" alt="Payment QR Code" class="size-full object-contain p-0" src="qr.png"/>
+<div class="absolute inset-0 border-4 border-primary/20 rounded-xl pointer-events-none"></div></div>
+<p class="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400">Scan this QR code to pay securely</p>
+</section>
+<!-- UPI Apps Section -->
+<section class="space-y-4">
+<div class="flex items-center gap-3">
+<div class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
+<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Pay via UPI</h3>
+<div class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
+</div>
+<div class="grid gap-3">
+    <a id="pay-now-btn" href="#" class="flex items-center justify-center gap-4 p-5 rounded-xl bg-primary text-white hover:bg-brand-dark transition-all transform active:scale-95 shadow-lg">
+        <span class="material-symbols-outlined">payments</span>
+        <span class="font-bold text-lg">Pay Now via Any UPI App</span>
+    </a>
+    
+    <a id="whatsapp-btn" href="#" target="_blank" class="flex items-center justify-center gap-2 text-primary font-semibold text-xs hover:underline mt-2">
+        <span class="material-symbols-outlined text-sm">chat</span>
+        Share payment screenshot on WhatsApp
+    </a>
+</div>
+</section>
+<p class="text-center text-[10px] text-slate-400 mt-8">
+<span class="material-symbols-outlined align-middle text-xs">verified_user</span>
+  100% Safe &amp; Secure Payments powered by IntelliTea
+</p></main>
+<!-- Fixed Bottom Action -->
+</div>
+</body>
+
+<script>
+    // 1. Get the dynamic amount from the chat page
+const storedAmount = localStorage.getItem("intelliTeaTotal");
+console.log("Amount received from Chat:", storedAmount);
+if (!storedAmount || storedAmount === "0") {
+        document.getElementById("total-amount").innerText = "₹0";
+        alert("Wait! No amount was detected. Please go back to the chat.");
+    } else {
+        document.getElementById("total-amount").innerText = "₹" + storedAmount;
+    }
+    // document.getElementById("total-amount").innerText = "₹" + storedAmount;
+
+// 2. CONFIGURATION
+const vpa = "menkaarora022@okhdfcbank"; // <--- CHANGE THIS TO YOUR ACTUAL UPI ID
+const name = "menka arora";
+const whatsappNumber = "9464364880"; // <--- CHANGE TO YOUR NUMBER (WITH 91)
+
+// 3. Create the UPI Link
+const upiLink = `upi://pay?pa=${vpa}&pn=${encodeURIComponent(name)}&am=${storedAmount}&cu=INR&tn=TeaOrder`;
+
+// 4. Update the Button and QR Code
+document.getElementById("pay-now-btn").href = upiLink;
+
+const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}&margin=10`;
+document.getElementById("qr-image").src = qrUrl;
+
+// 5. Setup WhatsApp Message
+const waMsg = `Hello! I just paid ₹${storedAmount} for my tea order. Here is the screenshot.`;
+document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMsg)}`;
+</script>
+</html>

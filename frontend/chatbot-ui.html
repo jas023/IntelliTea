@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#a1e619",
+              "background-light": "#f7f8f6",
+              "background-dark": "#1c2111",
+              "tea-dark": "#355e3b",
+              "tea-medium": "#6b8e23",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full max-w-[480px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- Background Overlay (Tea Theme) -->
+<div class="absolute inset-0 z-0 opacity-10 pointer-events-none bg-cover bg-center" data-alt="Soft green tea leaves background pattern" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCLXZ31TfnQsgTjA1zigw_L5G0DfNtDWUumZzYphUBmP2NPlSuJ48rVgY2eiuoKBgOAN7MCS8p873H8te5Y9qY6Yhh2tauXxRcsc7rup8WqTxMCs4U6jVTposYWgsjx3pziE3WmNrplC_VTMJkauCBZf4ePdhFFTaLw-J2u8GjrjJTC_X_lempskPHQ3xJUMOcdEltDXVeFsjqDxEAjzHnNUn8UXKcIjt0FPmkQiju_fuy37bdDcAeQLN8LCxWxzk-yLqtYOJULlcY');">
+</div>
+<!-- Top Header -->
+<header class="relative z-10 flex flex-col items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10 pt-4 pb-2">
+<div class="flex items-center w-full px-4 justify-between">
+<button class="text-tea-dark dark:text-primary flex items-center justify-center p-2 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h2 class="text-tea-dark dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">IntelliTea</h2>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-tea-medium dark:text-primary/80 text-xs font-semibold uppercase tracking-wider">Online</span>
+</div>
+</div>
+<button class="text-tea-dark dark:text-primary flex items-center justify-center p-2 rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- Chat Area -->
+<main class="relative z-10 flex-1 overflow-y-auto p-4 space-y-6 flex flex-col" id="chat-main"><div class="flex justify-center"><span class="text-[11px] font-bold text-tea-medium/60 uppercase tracking-widest bg-primary/5 px-3 py-1 rounded-full">Today</span></div></main>
+<!-- Input Area -->
+<footer class="relative z-10 p-4 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md">
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center size-10 rounded-full bg-primary/10 text-tea-dark dark:text-primary">
+<span class="material-symbols-outlined">add</span>
+</button>
+<div class="flex-1 relative">
+<input class="w-full bg-background-light dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary/50 rounded-2xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-tea-medium/40 font-medium shadow-inner" id="chat-input" placeholder="Type a message..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center size-8 rounded-xl bg-primary text-tea-dark shadow-sm hover:scale-105 active:scale-95 transition-transform" id="send-btn">
+<span class="material-symbols-outlined text-lg">send</span>
+</button>
+</div>
+</div>
+<!-- Bottom Indicator -->
+<div class="h-1.5 w-32 bg-slate-300 dark:bg-slate-700 mx-auto mt-6 rounded-full opacity-50"></div>
+</footer><script>
+const chatMain = document.getElementById('chat-main');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+
+function addMessage(text, isAi) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `flex items-end gap-3 ${isAi ? 'justify-start' : 'justify-end'} group animate-in fade-in slide-in-from-bottom-2 duration-300 w-full`;
+  
+  const iconHtml = isAi 
+    ? '<div class="bg-primary rounded-full w-8 h-8 flex items-center justify-center shadow-md shadow-primary/20 shrink-0"><span class="material-symbols-outlined text-tea-dark text-lg">psychology</span></div>'
+    : '<div class="bg-primary/20 rounded-full w-8 h-8 flex items-center justify-center border border-primary/30 shrink-0"><span class="material-symbols-outlined text-tea-dark text-sm">person</span></div>';
+
+  // --- THE BRACKET MAGIC HAPPENS HERE ---
+  let displayHtml = text;
+  let buttonsHtml = '';
+  
+  if (isAi) {
+      // Find anything inside [ ]
+      const buttonRegex = /\[(.*?)\]/g;
+      const matches = [...text.matchAll(buttonRegex)];
+      
+      if (matches.length > 0) {
+          // Remove the brackets from the main text
+          displayHtml = text.replace(buttonRegex, '').trim();
+          
+          // Generate the HTML for the buttons
+          buttonsHtml = '<div class="flex flex-wrap gap-2 mt-3">';
+          matches.forEach(match => {
+              const btnText = match[1];
+              // When clicked, it automatically sends the button text to the AI
+              buttonsHtml += `<button onclick="handleSend('${btnText}')" class="text-xs font-bold bg-primary/20 text-tea-dark border border-primary/40 px-4 py-2 rounded-full hover:bg-primary/40 hover:scale-105 active:scale-95 transition-all shadow-sm">${btnText}</button>`;
+          });
+          buttonsHtml += '</div>';
+      }
+  }
+  // --------------------------------------
+
+  const contentHtml = `
+    <div class="flex ${isAi ? 'flex-1' : ''} flex-col gap-1 items-${isAi ? 'start' : 'end'}">
+      <p class="text-tea-medium dark:text-primary/70 text-[11px] font-bold uppercase tracking-tighter px-2">${isAi ? 'Charan Singh & Sons AI' : 'You'}</p>
+      <div class="text-white text-sm font-medium leading-relaxed max-w-[85%] rounded-2xl ${isAi ? 'rounded-tl-none bg-tea-medium' : 'rounded-tr-none bg-tea-dark'} px-4 py-3 shadow-sm">
+        ${displayHtml}
+        ${buttonsHtml}
+      </div>
+    </div>
+  `;
+
+  msgDiv.innerHTML = isAi ? iconHtml + contentHtml : contentHtml + iconHtml;
+  chatMain.appendChild(msgDiv);
+  chatMain.scrollTop = chatMain.scrollHeight;
+  }
+
+// Notice handleSend now accepts an optional parameter!
+async function handleSend(buttonText = null) {
+  const text = buttonText || chatInput.value.trim();
+  if (!text) return;
+
+// --- REDIRECTION INTERCEPTOR ---
+  if (text === "Proceed to Payment") {
+      const aiMessages = chatMain.querySelectorAll('.bg-tea-medium');
+      let finalAmount = "0";
+
+      if (aiMessages.length > 0) {
+          // Get text and remove any commas (e.g., 1,200 becomes 1200)
+          const lastMsg = aiMessages[aiMessages.length - 1].innerText.replace(/,/g, '');
+          const amountMatch = lastMsg.match(/(?:₹|Rs|Total:?)\s*(\d+)/i) || lastMsg.match(/(\d+)\s*(?:Rupees|INR)/i);
+          
+          if (amountMatch && amountMatch[1]) {
+              finalAmount = amountMatch[1]; 
+          } else {
+              // Fallback: just find the very last number in the string
+              const allNumbers = lastMsg.match(/\d+/g);
+              if (allNumbers) finalAmount = allNumbers[allNumbers.length - 1];
+          }
+        }
+
+      // 1. Force save to LocalStorage
+      localStorage.setItem("intelliTeaTotal", String(finalAmount));
+
+      // 2. Visual feedback
+      addMessage(`Final Total: ₹${finalAmount}. Opening payment...`, true);
+      
+      // 3. Short delay to ensure memory is written
+      setTimeout(() => {
+          window.location.href = "payment.html";
+      }, 800);
+
+      return; // CRITICAL: This stops the function from sending "Proceed to Payment" to the AI
+  }
+
+    // 4. Save to browser memory
+    localStorage.setItem("intelliTeaTotal", finalAmount);
+
+    addMessage("Opening secure UPI gateway...", true);
+    setTimeout(() => {
+        window.location.href = "payment.html";
+    }, 1200);
+    return;
+}
+
+  // If the user clicks the about button, redirect them immediately!
+  if (text === "Know About") {
+      addMessage("Taking you to our story...", true);
+      setTimeout(() => {
+          // Change this to your actual about page URL
+          window.location.href = "about-page.html"; 
+      }, 1500);
+      return; 
+  }
+  // --------------------------------
+
+  addMessage(text, false);
+  if (!buttonText) chatInput.value = ''; 
+
+  try {
+    const response = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+        addMessage(data.reply, true);
+    } else {
+        addMessage("Oops! Server error: " + data.error, true);
+    }
+
+  } catch (error) {
+    console.error("Connection Error:", error);
+    addMessage("Server disconnected?", true);
+  }
+
+
+sendBtn.addEventListener('click', () => handleSend());
+chatInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') handleSend();
+});
+
+// Initial greeting to trigger the AI
+window.addEventListener('load', () => {
+  // Silently trigger the backend so it gives us the first buttons immediately
+  setTimeout(() => {
+     handleSend("Hello");
+     // We temporarily remove the default fake message so the real AI takes over
+     chatMain.innerHTML = '<div class="flex justify-center"><span class="text-[11px] font-bold text-tea-medium/60 uppercase tracking-widest bg-primary/5 px-3 py-1 rounded-full">Today</span></div>';
+  }, 500);
+});
+</script>
+</div>
+</body></html>

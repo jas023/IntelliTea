@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Join IntelliTea - Sign Up</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface": "#fbfbe2",
+              "surface-dim": "#dbdcc3",
+              "on-primary-fixed": "#131f00",
+              "error-container": "#ffdad6",
+              "primary-fixed-dim": "#add461",
+              "surface-container-high": "#eaead1",
+              "outline": "#747967",
+              "surface-variant": "#e4e4cc",
+              "on-background": "#1b1d0e",
+              "inverse-primary": "#add461",
+              "outline-variant": "#c4c9b4",
+              "tertiary-container": "#a956a1",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#bfeec1",
+              "surface-container-low": "#f5f5dc",
+              "secondary-container": "#bdebbe",
+              "on-primary-container": "#faffe7",
+              "error": "#ba1a1a",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-fixed": "#380037",
+              "surface-bright": "#fbfbe2",
+              "surface-container-highest": "#e4e4cc",
+              "on-tertiary-fixed-variant": "#73266f",
+              "tertiary-fixed": "#ffd7f5",
+              "on-surface": "#1b1d0e",
+              "on-primary": "#ffffff",
+              "on-secondary-fixed": "#002109",
+              "background": "#fbfbe2",
+              "inverse-surface": "#303221",
+              "on-primary-fixed-variant": "#364e00",
+              "primary": "#476500",
+              "on-surface-variant": "#444939",
+              "primary-fixed": "#c8f17a",
+              "secondary": "#3e6844",
+              "inverse-on-surface": "#f2f2d9",
+              "on-error": "#ffffff",
+              "on-secondary-container": "#426c48",
+              "tertiary": "#8c3d86",
+              "on-error-container": "#93000a",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed-dim": "#ffabf2",
+              "on-tertiary-container": "#fffbff",
+              "surface-tint": "#496800",
+              "on-secondary-fixed-variant": "#274f2e",
+              "primary-container": "#5d7f13",
+              "surface-container": "#efefd7",
+              "secondary-fixed-dim": "#a4d2a6"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .botanical-overlay {
+            background-color: rgba(251, 251, 226, 0.85);
+            backdrop-filter: blur(8px);
+        }
+        .editorial-shadow {
+            box-shadow: 0 8px 24px -4px rgba(27, 29, 14, 0.06);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased min-h-screen relative overflow-x-hidden">
+<!-- Background Layer -->
+<div class="fixed inset-0 z-0">
+<img alt="Lush tea garden with vibrant green leaves covered in morning dew, soft sunlight filtering through the canopy" class="w-full h-full object-cover" data-alt="Lush tea garden with vibrant green leaves covered in morning dew, soft sunlight filtering through the canopy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYgghob6pgsigUXQ0Sp6qjA3ue6_OLyrI9gdKDS7C-Uds-wQEF_OZ9WrQNPt3NyZqQLWIqzBPmF7AMMTzm4sSbxaV2KUMVyMgk0ZgGJDJcU4WKarlIqWoc4YTTkgubWv0R_Xkfjg6fTU6EXlCPJ2OlxyBvuW3YwiWEMGTjIOAEuwk0YDm-BmHWL-VBvMwnjMpgRfO_9YYHSq_asl_kDRL001noF3E0qMrQ6Khq3Trm5SL_YdaUMKar8qHNI1zlUNt7JiJsjUP7-2o"/>
+</div>
+<!-- Top Navigation (Shell Implementation) -->
+<!-- Navigation suppressed for Transactional screen per "Shell Visibility & Relevance" rule -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#fbfbe2]/80 backdrop-blur-md">
+<button class="flex items-center gap-2 text-[#444939] hover:opacity-80 transition-opacity duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_back" href="signin.html">arrow_back</span>
+</button>
+<h1 class="font-headline font-bold text-2xl tracking-tight italic text-[#476500]">IntelliTea</h1>
+<div class="w-10"></div> <!-- Spacer for centering logo -->
+</header>
+<!-- Main Content Canvas -->
+<main class="relative z-10 flex items-center justify-center min-h-screen px-4 pt-20 pb-12">
+<div class="w-full max-w-md botanical-overlay rounded-[2rem] p-8 md:p-12 editorial-shadow">
+<!-- Editorial Header -->
+<div class="text-center mb-10">
+<h2 class="font-headline text-4xl font-semibold mb-3 text-on-surface">Begin your journey</h2>
+<p class="font-body text-on-surface-variant leading-relaxed">Join our community of tea enthusiasts and master the art of the perfect brew.</p>
+</div>
+<!-- Sign Up Form -->
+<form class="space-y-6">
+<!-- Name Field -->
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">Full Name</label>
+<input id="fullName" class="w-full bg-surface-container-lowest border-none rounded-xl px-5 py-4 focus:ring-2 focus:ring-primary/40 text-on-surface transition-all duration-300 placeholder:text-outline-variant/60" placeholder="Julian Barnes" type="text"/>
+</div>
+<!-- Email Field -->
+<div class="space-y-2">
+<label  class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">Email Address</label>
+<input id="email" class="w-full bg-surface-container-lowest border-none rounded-xl px-5 py-4 focus:ring-2 focus:ring-primary/40 text-on-surface transition-all duration-300 placeholder:text-outline-variant/60" placeholder="hello@intellitea.com" type="email"/>
+</div>
+<!-- Password Fields Group -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="space-y-2">
+<label  class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">Password</label>
+<input id="password" class="w-full bg-surface-container-lowest border-none rounded-xl px-5 py-4 focus:ring-2 focus:ring-primary/40 text-on-surface transition-all duration-300 placeholder:text-outline-variant/60" placeholder="••••••••" type="password"/>
+</div>
+<div class="space-y-2">
+<label  class="block font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">Confirm</label>
+<input id="confirmPassword" class="w-full bg-surface-container-lowest border-none rounded-xl px-5 py-4 focus:ring-2 focus:ring-primary/40 text-on-surface transition-all duration-300 placeholder:text-outline-variant/60" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<!-- Primary CTA -->
+<div class="pt-4">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold py-4 rounded-full transition-transform active:scale-95 duration-200 editorial-shadow text-lg" type="submit">
+                        Create Account
+                    </button>
+</div>
+<!-- Divider -->
+<div class="relative flex items-center py-4">
+<div class="flex-grow border-t border-outline-variant/30"></div>
+<span class="flex-shrink mx-4 text-xs font-bold uppercase tracking-widest text-outline">or</span>
+<div class="flex-grow border-t border-outline-variant/30"></div>
+</div>
+<!-- Social Auth -->
+<button class="w-full flex items-center justify-center gap-3 bg-surface-container-high hover:bg-surface-container-highest transition-colors duration-300 text-primary font-bold py-4 rounded-full" type="button">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="currentColor"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="currentColor"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="currentColor"></path>
+</svg>
+                    Sign Up with Google
+                </button>
+</form>
+<!-- Footer Link -->
+<p class="text-center mt-8 text-on-surface-variant font-medium">
+                Already part of the ritual? 
+                <a class="text-primary font-bold underline decoration-primary/30 underline-offset-4 hover:decoration-primary transition-all" href="signin.html">Sign In</a>
+</p>
+</div>
+</main>
+<!-- Decoration Element (Asymmetric Detail) -->
+<div class="hidden lg:block fixed -bottom-24 -left-24 w-96 h-96 opacity-20 pointer-events-none">
+<span class="material-symbols-outlined text-[24rem] text-primary select-none" data-icon="eco">eco</span>
+</div>
+<script>
+    const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
+    const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    document.querySelector('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const fullName = document.getElementById('fullName').value;
+
+        const { data, error } = await _supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: { full_name: fullName }
+            }
+        });
+
+        if (error) {
+        alert("Signup Error: " + error.message);
+    } else {
+        alert('Account created! Redirecting to home...');
+        
+        // THIS IS THE REDIRECT CODE
+        window.location.href = 'index.html'; 
+    }
+    });
+
+
+</script>
+</body></html>

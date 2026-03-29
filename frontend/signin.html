@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign In | IntelliTea</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Newsreader & Manrope -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface": "#fbfbe2",
+              "surface-dim": "#dbdcc3",
+              "on-primary-fixed": "#131f00",
+              "error-container": "#ffdad6",
+              "primary-fixed-dim": "#add461",
+              "surface-container-high": "#eaead1",
+              "outline": "#747967",
+              "surface-variant": "#e4e4cc",
+              "on-background": "#1b1d0e",
+              "inverse-primary": "#add461",
+              "outline-variant": "#c4c9b4",
+              "tertiary-container": "#a956a1",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#bfeec1",
+              "surface-container-low": "#f5f5dc",
+              "secondary-container": "#bdebbe",
+              "on-primary-container": "#faffe7",
+              "error": "#ba1a1a",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-fixed": "#380037",
+              "surface-bright": "#fbfbe2",
+              "surface-container-highest": "#e4e4cc",
+              "on-tertiary-fixed-variant": "#73266f",
+              "tertiary-fixed": "#ffd7f5",
+              "on-surface": "#1b1d0e",
+              "on-primary": "#ffffff",
+              "on-secondary-fixed": "#002109",
+              "background": "#fbfbe2",
+              "inverse-surface": "#303221",
+              "on-primary-fixed-variant": "#364e00",
+              "primary": "#476500",
+              "on-surface-variant": "#444939",
+              "primary-fixed": "#c8f17a",
+              "secondary": "#3e6844",
+              "inverse-on-surface": "#f2f2d9",
+              "on-error": "#ffffff",
+              "on-secondary-container": "#426c48",
+              "tertiary": "#8c3d86",
+              "on-error-container": "#93000a",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed-dim": "#ffabf2",
+              "on-tertiary-container": "#fffbff",
+              "surface-tint": "#496800",
+              "on-secondary-fixed-variant": "#274f2e",
+              "primary-container": "#5d7f13",
+              "surface-container": "#efefd7",
+              "secondary-fixed-dim": "#a4d2a6"
+            },
+            fontFamily: {
+              "headline": ["Newsreader"],
+              "body": ["Manrope"],
+              "label": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.25rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr
+    }
+.editorial-shadow {
+    box-shadow: 0 8px 24px -4px rgba(27, 29, 14, 0.06)
+    }
+.bg-leafy-overlay {
+    background-image: linear-gradient(rgba(251, 251, 226, 0.85), rgba(251, 251, 226, 0.85)), 
+    url('https://images.unsplash.com/photo-1544787210-2213d84ad96b?q=80&w=2070&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    }</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+<!-- TopAppBar - Suppressed Shell logic applies: Back action implies task-focus -->
+<header class="fixed top-0 w-full flex items-center justify-between px-6 h-16 bg-[#fbfbe2]/80 backdrop-blur-md z-50">
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#476500] hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_back" href="">arrow_back</span>
+</button>
+</div>
+<div class="absolute left-1/2 -translate-x-1/2">
+<h1 class="font-headline italic font-bold text-2xl tracking-tight text-[#476500]">IntelliTea</h1>
+</div>
+<div class="w-10"></div> <!-- Spacer for symmetry -->
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center px-6 pt-20 pb-12 bg-leafy-overlay" data-alt="close-up of vibrant green tea leaves with morning dew and soft sunlight filtering through a botanical garden canopy">
+<!-- Login Card -->
+<div class="w-full max-w-md bg-surface/90 backdrop-blur-xl rounded-2xl p-8 editorial-shadow">
+<div class="text-center mb-10">
+<h2 class="font-headline text-4xl text-on-surface mb-2">Welcome Back</h2>
+<p class="font-body text-on-surface-variant text-sm">Reconnect with your brewing ritual</p>
+</div>
+<form class="space-y-6">
+<!-- Email Field -->
+<div class="space-y-2">
+<label class="block font-label text-xs uppercase tracking-widest text-on-surface-variant ml-1">Email Address</label>
+<input id="email" class="w-full px-5 py-4 bg-surface-container-lowest border-none rounded-xl ring-1 ring-outline-variant/20 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-outline-variant/60 font-body" placeholder="tea.lover@example.com" type="email"/>
+</div>
+<!-- Password Field -->
+<div class="space-y-2">
+<div class="flex justify-between items-end ml-1">
+<label class="block font-label text-xs uppercase tracking-widest text-on-surface-variant">Password</label>
+<a class="text-xs font-label text-primary hover:underline transition-all" href="#">Forgot Password?</a>
+</div>
+<input id="password" class="w-full px-5 py-4 bg-surface-container-lowest border-none rounded-xl ring-1 ring-outline-variant/20 focus:ring-primary/40 focus:outline-none transition-all placeholder:text-outline-variant/60 font-body" placeholder="••••••••" type="password"/>
+</div>
+<!-- Sign In Button -->
+<button onclick="signInWithGoogle()" class="w-full py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-xl editorial-shadow hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="submit">
+<span>Sign In</span>
+<span class="material-symbols-outlined text-sm" data-icon="login">login</span>
+</button>
+</form>
+<!-- Divider -->
+<div class="relative my-8">
+<div aria-hidden="true" class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant/20"></div>
+</div>
+<div class="relative flex justify-center text-xs uppercase tracking-widest">
+<span class="bg-surface px-4 text-on-surface-variant">Or continue with</span>
+</div>
+</div>
+<!-- Social Auth -->
+<button class="w-full py-4 bg-surface-container-lowest border border-outline-variant/20 text-on-surface font-semibold rounded-xl hover:bg-surface-container-low active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span>Google</span>
+</button>
+<!-- Sign Up Link -->
+<p class="mt-8 text-center text-sm font-body text-on-surface-variant">
+                Don't have an account? 
+                <a class="text-primary font-bold hover:underline" href="signup.html">Signup</a>
+</p>
+</div>
+</main>
+<!-- Navigation Suppressed for Login/Transactional Screen as per logic rules -->
+<footer class="mt-auto py-6 px-6 flex flex-col items-center gap-4">
+<div class="flex gap-6 opacity-60">
+<a class="text-xs uppercase tracking-widest font-label hover:text-primary transition-colors" href="#">Privacy</a>
+<a class="text-xs uppercase tracking-widest font-label hover:text-primary transition-colors" href="#">Terms</a>
+<a class="text-xs uppercase tracking-widest font-label hover:text-primary transition-colors" href="#">Support</a>
+</div>
+<p class="text-[10px] uppercase tracking-tighter opacity-40 font-label">© 2024 IntelliTea Editorial. All Rights Reserved.</p>
+</footer>
+<script>
+const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
+const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+document.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    // 1. Attempt login
+    const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+    });
+
+    if (authError) {
+        alert("Login failed: " + authError.message);
+        return;
+    }
+
+    // 2. Check if this user is in our 'authorized_admins' table
+    const { data: adminData, error: adminError } = await _supabase
+        .from('authorized_admins')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+    if (adminError || !adminData) {
+        alert("Access Denied: You are not on the authorized admin list.");
+        // Log them back out immediately if they aren't authorized
+        await _supabase.auth.signOut();
+    } else {
+        // Success! Go to dashboard
+        window.location.href = 'dashboard.html';
+    }
+});  
+</script>
+</body></html>

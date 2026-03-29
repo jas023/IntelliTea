@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IntelliTea Recipes Page</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6b8f24",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#1b1f13",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+    html, body {
+    height: auto;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+        body {
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+        .bg-overlay {
+            background-color: rgba(255, 255, 255, 0.85);
+           
+        }
+        .tea-bg {
+            background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuB_RjeSJc4Onq2kyDA975W7goJYKS_hq0gB1ABzC20UPu5vlbvuFPuS0hEVVp6spwBRyOmL8yDFnOmlNxbhni9T8-spXgfZ9izCcvSh42Cag2qibOYRPb2bPWrxa9B0k1xRubNBhwaW8fY2W0bT-volAn2KyU2psbhPZLzrhhyeJHLdfd_4A-380zipl_Td2qHuZOlSdFnEM8j4DpQm5SNDuzXTs_Zpm6mPFcj_IY_IX0HhXCm6z5NZx0bFsmarWy3Nen91kJL92uNF); 
+            background-size: cover;
+            background-position: center;
+           background-attachment: fixed; /* Keeps image still */
+    
+    /* Crucial: height must be auto to grow with content */
+    width: 100%;
+    min-height: 100vh; 
+    height: auto; 
+    position: relative;
+   /* display: flex;
+    flex-direction: column; */
+           /* background-attachment: fixed; */
+    
+        }
+        .master-overlay {
+    background-color: rgba(255, 255, 255, 0.7); /* Light mode tint */
+   inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    position: fixed;
+}
+
+.dark .master-overlay {
+    background-color: rgba(27, 31, 19, 0.85); /* Dark mode tint */
+}
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="tea-bg">
+<!-- <div class="absolute inset-0 bg-overlay dark:bg-background-dark/90 z-0"></div> -->
+ <div class="master-overlay fixed inset-0 z-0 ointer-events-none"></div>
+<div class="relative z-10 flex flex-col min-h-screen">
+<!-- <header class="flex items-center p-4 justify-between bg-white/50 dark:bg-background-dark/50 backdrop-blur-2xl top-0 z-20"> -->
+    <header class=" sticky top-0 z-50 flex items-center justify-between px-4 py-4 bg-transparent backdrop-blur-md border-b border-black/10 dark:border-white/5">
+<div class="text-primary flex size-10 items-center justify-center">
+<button onclick="window.location.href='landing-page.html'" class="flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
+</button>
+</div>
+<!-- <h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold flex-1 text-center">IntelliTea</h2> -->
+<!-- <div class="flex w-10 items-center justify-end"> -->
+<!-- <div class="flex items-center justify-center text-primary"> -->
+<!-- <span class="material-symbols-outlined text-3xl fill-1">potted_plant</span> -->
+<!-- </div> -->
+<!-- </div> -->
+ <a href="landing-page.html" class="flex items-center gap-2 hover:scale-105 transition-transform">
+    <img src="./logo2.png" alt="Logo" class="h-12 w-auto object-contain">
+    <span class="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100"></span>
+</a>
+</header>
+<main class="flex-1 px-4 py-8 max-w-lg mx-auto sm:max-w-lg">
+<div class="text-center mb-8">
+<h1 class="text-primary text-4xl font-bold tracking-tight mb-2">Tea Recipes</h1>
+<p class="text-slate-600 dark:text-slate-400 text-base font-normal">Discover how to prepare your favorite IntelliTea blends</p>
+</div>
+<div class="flex flex-col gap-4">
+<details class="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-primary/10 overflow-hidden" open="">
+<summary class="flex cursor-pointer items-center justify-between p-4 gap-4 list-none">
+<div class="flex items-center gap-4 flex-1">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="black-gold" src="black-gold.png"/>
+</div>
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-slate-100 font-bold text-lg">Tea</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm line-clamp-1">Let's steep in happiness sprinkled with tea puns.</p>
+</div>
+</div>
+<div class="text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined text-2xl">keyboard_arrow_down</span>
+</div>
+</summary>
+<div class="p-4 pt-0 border-t border-slate-50 dark:border-slate-700">
+<div class="mt-4">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Ingredients</h4>
+<ul class="text-slate-600 dark:text-slate-300 text-sm space-y-1 ml-1">
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 1 cup filtered water</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 1 tsp black gold tea</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 1/2 cup fresh milk</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> a pinch of masala</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> sugar (optional)</li>
+</ul>
+</div>
+<div class="mt-6">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Preparation Steps</h4>
+<ol class="text-slate-600 dark:text-slate-300 text-sm space-y-3">
+<li class="flex gap-3">
+<span class="font-bold text-primary">01</span>
+<span>Boil water in a small pot with the masala.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">02</span>
+<span>Add the tea leaves and steep on low heat for 3 minutes.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">03</span>
+<span>Pour in the milk and bring to a rolling boil.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">04</span>
+<span>Strain into a ceramic cup and sweeten if desired.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">Note</span>
+<span>(You can make this as per your taste also.)</span>
+</li>
+</ol>
+</div>
+</div>
+</details>
+<details class="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-transparent hover:border-primary/20 transition-all">
+<summary class="flex cursor-pointer items-center justify-between p-4 gap-4 list-none">
+<div class="flex items-center gap-4 flex-1">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Vibrant green matcha latte in a glass" src="green-gold.png"/>
+</div>
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-slate-100 font-bold text-lg">Green Tea (Kahwa) </h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm line-clamp-1">Natural active immunity booster.</p>
+</div>
+</div>
+<div class="text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined text-2xl">keyboard_arrow_down</span>
+</div>
+</summary>
+<div class="p-4 pt-0 border-t border-slate-50 dark:border-slate-700">
+<div class="mt-4">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Ingredients</h4>
+<ul class="text-slate-600 dark:text-slate-300 text-sm space-y-1 ml-1">
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 1 cup filtered water</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 1 tsp green gold tea(kahwa) leaves</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> a pinch of masala(optional as per your taste)</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> sugar (optional)</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> cardamom (in case you want to add it)</li>
+</ul>
+</div>
+<div class="mt-6">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Preparation Steps</h4>
+<ol class="text-slate-600 dark:text-slate-300 text-sm space-y-3">
+<li class="flex gap-3">
+<span class="font-bold text-primary">01</span>
+<span>Boil water in a small pot with cardamom(if you want to add it).</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">02</span>
+<span>Once the water boils properly turn off he stove.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">03</span>
+<span>Then after 2 seconds add on kahwa leaves and leave it for 2 minutes .</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">04</span>
+<span>Then strain it into cup and you can add few drops of lemon or sugar also as per your taste.</span>
+</li>
+</ol>
+</div>
+</div>
+</details>
+<details class="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-transparent hover:border-primary/20 transition-all">
+<summary class="flex cursor-pointer items-center justify-between p-4 gap-4 list-none">
+<div class="flex items-center gap-4 flex-1">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Dried chamomile flowers in a glass jar" src="masala.png"/>
+</div>
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-slate-100 font-bold text-lg">Masala</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm line-clamp-1">Enhance the taste with this masala.</p>
+</div>
+</div>
+<div class="text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined text-2xl">keyboard_arrow_down</span>
+</div>
+</summary>
+<div class="p-4 pt-0">
+<p class="text-slate-500 text-sm italic">You can use this special masala in tea, green tea or even milk also.</p>
+</div>
+</details>
+<details class="group bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-transparent hover:border-primary/20 transition-all">
+<summary class="flex cursor-pointer items-center justify-between p-4 gap-4 list-none">
+<div class="flex items-center gap-4 flex-1">
+<div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Deep red hibiscus tea with lemon slice" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCttNbZHdbP1EASuesQ22akkcav6FvG_v3N0Yb0zh0uEo5_UggC9CHSxZ-mTwYB6vQSKNOvZgjQbvRB-655uILFY0ioV9Bg9PBaDR1FU7aCgw-q3f5SZFmnCy7ci9lPcN_onVkhePzAzLPV5Jdc9GdmND3JXXFMlN8RxHCUYV0lkB83fG5eLYXa88dcc1CeHb0j0OZNRDG6s3v1FfGM0sxNSdZVIJBpUmhmnuQ0btrFUn2D6T-8p5cOZsD5hH6u_yqoMDay91esm6A"/>
+</div>
+<div class="flex flex-col">
+<h3 class="text-slate-900 dark:text-slate-100 font-bold text-lg">Kashmiri Tea(Noon Chai)</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm line-clamp-1">Get the flavour of authentic kashmiri chai.</p>
+</div>
+</div>
+<div class="text-primary group-open:rotate-180 transition-transform duration-300">
+<span class="material-symbols-outlined text-2xl">keyboard_arrow_down</span>
+</div>
+</summary>
+<div class="p-4 pt-0 border-t border-slate-50 dark:border-slate-700">
+<div class="mt-4">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Ingredients</h4>
+<ul class="text-slate-600 dark:text-slate-300 text-sm space-y-1 ml-1">
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 3 cup filtered water</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> 2 tsp tea leaves</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> namak/sugar (as per your taste)</li>
+<li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> </li>
+<!-- <li class="flex items-center gap-2"><span class="size-1 bg-primary rounded-full"></span> cardamom (in case you want to add it)</li> -->
+</ul>
+</div>
+<div class="mt-6">
+<h4 class="text-primary text-sm font-bold uppercase tracking-wider mb-2">Preparation Steps</h4>
+<ol class="text-slate-600 dark:text-slate-300 text-sm space-y-3">
+<li class="flex gap-3">
+<span class="font-bold text-primary">01</span>
+<span>Boil water in a pot with tea leaves, boil it untill the water is left half.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">02</span>
+<span>Then again add on water into this , and boil it again.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">03</span>
+<span>When you see it has changed its color almost after ____ time , then turn off the heat.</span>
+</li>
+<li class="flex gap-3">
+<span class="font-bold text-primary">04</span>
+<span>Then do some fentia and then take glass.</span>
+</li>
+</ol>
+</div>
+</div>
+</details>
+</div>
+</main>
+<nav class="sticky bottom-0 z-50 flex gap-2 bg-transparent backdrop-blur-md border-t border-black/5 dark:border-white/5 px-4 pb-6 pt-2">
+<!-- <nav class=" bg-overlay flex gap-2 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-background-dark/90 backdrop-blur-2xl px-4 pb-6 pt-2 sticky bottom-0"> -->
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400" href="landing-page.html">
+<span class="material-symbols-outlined">home</span>
+<p class="text-xs font-medium">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="recipe.html">
+<span class="material-symbols-outlined fill-1">menu_book</span>
+<p class="text-xs font-medium">Recipes</p>
+</a>
+<!-- <a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">shopping_bag</span>
+<p class="text-xs font-medium">Shop</p>
+</a> -->
+<!-- <a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-xs font-medium">Settings</p>
+</a> -->
+</nav>
+</div>
+</div>
+
+</body></html>

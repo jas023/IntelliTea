@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#709c16",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#1c2111",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>IntelliTea Admin - Orders Management</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex flex-col min-h-screen">
+<!-- Header -->
+<header class="bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10 border-b border-primary/10">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="bg-primary p-2 rounded-lg text-white flex items-center justify-center">
+<span class="material-symbols-outlined">eco</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-primary">IntelliTea Admin</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-primary/10 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-primary/30">
+<img alt="Admin Avatar" data-alt="Profile picture of the administrator" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6WXmSCWC9dOkvktnhak0HFkKGIP5sbA0LZS2ZLjvbYscoAd9AUlCpbeUKM-i_gyMVbDWoFVTY1adL-0oPGNbsjClEWZc02nWCrC0eAP3r7_z464f1SprK-t87IUamHVHWMunB2KpJ-t_XWmkW2-E2jTLdg52gI3G5zDg7-Kalw1yipISEA85EZDnEaNh0VlhYTZ_4WgEDkB3rR09v8kk6hJ93Dz4kxSbqC_ZnKdnAF8nNGpWo3oAXZmzt72CyzazeYG-mgCWCESs"/>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-white dark:bg-slate-800/50 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined">shopping_basket</span>
+</div>
+<div>
+<p class="text-sm font-medium text-slate-500">Total Orders</p>
+<p class="text-2xl font-bold">1,284</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/50 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div>
+<p class="text-sm font-medium text-slate-500">Pending</p>
+<p class="text-2xl font-bold">42</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/50 p-6 rounded-xl border border-primary/10 shadow-sm">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div>
+<p class="text-sm font-medium text-slate-500">Delivered</p>
+<p class="text-2xl font-bold">1,242</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="bg-white dark:bg-slate-800/40 rounded-xl border border-primary/10 shadow-sm overflow-hidden">
+<div class="p-4 sm:p-6 border-b border-primary/10">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<h2 class="text-lg font-bold">Orders Management</h2>
+<div class="flex gap-2">
+<div class="relative flex-1 sm:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-slate-900 border-none rounded-lg focus:ring-2 focus:ring-primary/50 text-sm" placeholder="Search orders..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-semibold">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                                Filter
+                            </button>
+</div>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-background-light/50 dark:bg-slate-900/50">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Order ID</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Customer</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Address</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-primary/5">
+<!-- Order 1 -->
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap font-medium text-primary">#ORD-8821</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0">
+<img alt="Alex Rivera" data-alt="Customer avatar for Alex Rivera" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrog0cDRCYoOl-4Aj5lBYPgGo4A2ZglyLPiUNgpoveachxXUQrce6BKd1g2Qc9hnCQQOK9_bgoyKJbGgdswiEirp2RzSrV9i92DlqGiCwkF4WKom2iSrUDHLL64zuKoNALblOZ5VBYa5Ai0t-DJ7b9dTfpif9i2nM9NdqYcbdQcAy4ej2oPfKfKwI2bpVy7dWa0P9MCaK2DaowVlHoIQHg6-rXHqi5X4f0mgXAsIVAG_uDFOqhap7S-SQEt79Pqb4wwWRJGOmNOOU"/>
+</div>
+<span class="font-medium text-sm">Alex Rivera</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">123 Green Tea Way, Boston</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                                        Delivered
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Order 2 -->
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap font-medium text-primary">#ORD-8822</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0">
+<img alt="Sarah Chen" data-alt="Customer avatar for Sarah Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfGjPU0gHJ1A8gZirlKId19coO2paBLaPa_7K9lVYpMvzl7a8u_08wHEYh4Q4axwHgA3iZBiqHphOVyrpg3XVWpi8Der8sPIxEmu0bf0x5303MIVsizlXhyFhOYxleI3AUWQzGyvQvoGMt8FW6REaLXnos_Ihqyvb8Bifi7FlKWOkltqMLDaWNb8ZBNxT5X6VC_umxRB2wiYT49C2aVKiTGHBMQGQs0F2ISjazAvoSPYi5ggSglrLABOCrmFenYvl9RtFD5f5BhV8"/>
+</div>
+<span class="font-medium text-sm">Sarah Chen</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">45 Oolong Street, Seattle</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-600">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Order 3 -->
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap font-medium text-primary">#ORD-8823</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0">
+<img alt="James Miller" data-alt="Customer avatar for James Miller" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJUu_7MrCHCME_9b5J--plikzYVwFS_5Ka9oDjzem0Ra8fEMRlxHYKG5KXNiakidRHikgLXtvCl3BM9foVTrTKPLqNZC3Y364f4UlhmziEaXjtr9wYGM0kNThzVkadVVfV7aQQprKAK_DfxGjqUrsIVwpxbk00IpmcTIgYSkbUivSVdSm8oZiaqCMGwALtfGZPEsehlcSvAaJvLz_XUvA6OpDk7p5HXKQaJziGoDvpnJcLA-j8kq035rj0lRbK4-pQ_1ObOd8ZKVc"/>
+</div>
+<span class="font-medium text-sm">James Miller</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">88 Matcha Blvd, San Francisco</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                                        Delivered
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Order 4 -->
+<tr class="hover:bg-primary/5 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap font-medium text-primary">#ORD-8824</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0">
+<img alt="Elena Rodriguez" data-alt="Customer avatar for Elena Rodriguez" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3y9GUhq41eleMz_yF7lKnDLbEUCpscN1bq4bhrOi2QLFzX4Opy86pfnabipPgKMFY4F4STSzWeqf06150PR3BbKy3-D4xSyUfpQlMaQIwWNoln46VjwOCRsIx7AlKQNAPYwPeiwP7DXipERgHZD44YCVya7BjmAGnxL1qXEw3nG6MC7tai8RSCSAwG-eh0pcS13i4OXtmTvCn_-aS44L-CCjblLQo_EDXXHrFO2sLtRvPOAdA1BGPAXiizpHGogFgv5PcDWwbaUA"/>
+</div>
+<span class="font-medium text-sm">Elena Rodriguez</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">12 Sencha Lane, Austin</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-600">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 border-t border-primary/10 flex items-center justify-between">
+<p class="text-sm text-slate-500">Showing 1 to 4 of 1,284 orders</p>
+<div class="flex items-center gap-2">
+<button class="p-1 rounded-lg hover:bg-primary/10 text-slate-500">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="px-3 py-1 rounded-lg bg-primary text-white text-sm font-semibold">1</button>
+<button class="px-3 py-1 rounded-lg hover:bg-primary/10 text-sm">2</button>
+<button class="px-3 py-1 rounded-lg hover:bg-primary/10 text-sm">3</button>
+<button class="p-1 rounded-lg hover:bg-primary/10 text-slate-500">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Mobile -->
+<nav class="sm:hidden sticky bottom-0 border-t border-primary/10 bg-white dark:bg-slate-900 px-4 pb-3 pt-2">
+<div class="flex gap-2">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-[10px] font-medium leading-none">Dashboard</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">shopping_bag</span>
+<p class="text-[10px] font-medium leading-none">Orders</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<p class="text-[10px] font-medium leading-none">Inventory</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium leading-none">Settings</p>
+</a>
+</div>
+</nav>
+</div>
+</body></html>
