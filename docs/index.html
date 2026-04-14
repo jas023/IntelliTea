@@ -1,276 +1,153 @@
 <!DOCTYPE html>
-
-<html class="light" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>IntelliTea Admin Dashboard</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IntelliTea | Premium Brewing</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#709c16",
-                        "background-light": "#f7f8f6",
-                        "background-dark": "#1c2111",
+                        "primary": "#37ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#132210",
                     },
                     fontFamily: {
-                        "display": ["Plus Jakarta Sans"]
+                        "display": ["Space Grotesk", "sans-serif"]
                     },
-                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
                 },
             },
         }
     </script>
-<style>
+    <style type="text/tailwindcss">
+        html, body {
+            max-width: 100%;
+            overflow-x: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            min-height: 100dvh; 
+            display: flex;
+            flex-direction: column;
+        }
         .leaf-pattern {
-            background-color: transparent;
-            background-image: radial-gradient(#709c16 0.5px, transparent 0.5px), radial-gradient(#709c16 0.5px, #f7f8f6 0.5px);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 10px;
-            opacity: 0.05;
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_RjeSJc4Onq2kyDA975W7goJYKS_hq0gB1ABzC20UPu5vlbvuFPuS0hEVVp6spwBRyOmL8yDFnOmlNxbhni9T8-spXgfZ9izCcvSh42Cag2qibOYRPb2bPWrxa9B0k1xRubNBhwaW8fY2W0bT-volAn2KyU2psbhPZLzrhhyeJHLdfd_4A-380zipl_Td2qHuZOlSdFnEM8j4DpQm5SNDuzXTs_Zpm6mPFcj_IY_IX0HhXCm6z5NZx0bFsmarWy3Nen91kJL92uNF');
+            background-repeat: no-repeat;
+            background-size: cover;
+            opacity: 0.5; 
+            filter: blur(2px);  
+            mix-blend-mode: multiply; 
+            position: fixed;
+            inset: 0;
+        }
+        .dark .leaf-pattern {
+            opacity: 0.8;
+            filter: invert(1);
+            mix-blend-mode: screen;
+        }
+        nav {
+            /* FIXED: Added standard backdrop-filter for compatibility */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
     </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
-<div class="flex min-h-screen relative">
-<!-- Sidebar Desktop -->
-<aside class="hidden lg:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-primary/10 p-6 fixed h-full z-40">
-<div class="flex items-center gap-3 mb-10 px-2">
-<div class="bg-primary/20 p-2 rounded-lg">
-<span class="material-symbols-outlined text-primary text-3xl">eco</span>
-</div>
-<h1 class="text-xl font-bold tracking-tight text-primary">IntelliTea</h1>
-</div>
-<nav class="flex-1 space-y-2">
-<a class="flex items-center gap-3 px-4 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 transition-all" href="#">
-<span class="material-symbols-outlined">dashboard</span>
-<span class="font-semibold">Dashboard</span>
-</a>
-<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" href="#">
-<span class="material-symbols-outlined">package_2</span>
-<span class="font-semibold">Orders</span>
-</a>
-<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" href="#">
-<span class="material-symbols-outlined">report_problem</span>
-<span class="font-semibold">Complaints</span>
-</a>
-<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" href="#">
-<span class="material-symbols-outlined">chat_bubble</span>
-<span class="font-semibold">Chat Queries</span>
-</a>
-<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" href="#">
-<span class="material-symbols-outlined">map</span>
-<span class="font-semibold">Delivery Tracking</span>
-</a>
-<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-primary/10 hover:text-primary rounded-xl transition-all mt-10" href="#">
-<span class="material-symbols-outlined">settings</span>
-<span class="font-semibold">Settings</span>
-</a>
-</nav>
-<div class="mt-auto p-4 bg-primary/5 rounded-2xl border border-primary/10">
-<div class="flex items-center gap-3">
-<img class="w-10 h-10 rounded-full object-cover" data-alt="Female administrator portrait profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrZ0QukPzjSmayfmm1Bus5TqckGQ2pf9f-JS88c3ER3APsCt-xwMDhoAgJSMeZGLoIRVho4crp6i6FebQKH8jiqyrBbmejb8JV0UD-WSLEgi6Pj_AS8a05pCAtLlWwCDIFTxZMUMT2mugv4l1oIJpaZAV94Z84rj-Ts31qWWukr4lTNgLZPQYzs5iZpwaryxLZxqB1o2sPt_sKAsuXnXNvijyXVC2ZlR868KxVrbWqCzQjyMPGy9iE13Vj9mx4vHzbU_lcz8sPrOk"/>
-<div>
-<p class="text-sm font-bold">Admin Jane</p>
-<p class="text-xs text-slate-500">Super User</p>
-</div>
-</div>
-</div>
-</aside>
-<!-- Main Content -->
-<main class="flex-1 lg:ml-72 flex flex-col relative">
-<!-- Background Pattern Overlay -->
-<div class="absolute inset-0 leaf-pattern pointer-events-none"></div>
-<!-- Top Header -->
-<header class="sticky top-0 z-30 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-primary/5">
-<div class="flex items-center gap-4">
-<button class="lg:hidden p-2 hover:bg-primary/10 rounded-lg text-primary">
-<span class="material-symbols-outlined">menu</span>
-</button>
-<h2 class="text-xl font-bold text-slate-800 dark:text-white">Admin Dashboard</h2>
-</div>
-<div class="flex items-center gap-4">
-<div class="hidden md:flex items-center bg-white dark:bg-slate-800 border border-primary/10 rounded-full px-4 py-2 w-64">
-<span class="material-symbols-outlined text-slate-400 text-sm">search</span>
-<input class="bg-transparent border-none focus:ring-0 text-sm w-full" placeholder="Search orders..." type="text"/>
-</div>
-<button class="relative p-2 text-slate-600 dark:text-slate-300 hover:bg-primary/10 rounded-full">
-<span class="material-symbols-outlined">notifications</span>
-<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background-light"></span>
-</button>
-</div>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased relative overflow-x-hidden">
+
+<header class="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-6 py-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10">
+    <a href="index.html" class="flex items-center gap-2">
+        <img src="./logo2.png" alt="IntelliTea Logo" class="h-9 sm:h-12 w-auto object-contain">
+    </a>
+    <a href="about-page.html">
+        <button class="text-sm font-bold hover:text-primary transition-all hover:opacity-80 px-4 py-2 border border-primary/20 rounded-full">About</button>
+    </a>
 </header>
-<!-- Dashboard Content -->
-<div class="p-6 relative z-10">
-<div class="mb-8">
-<h3 class="text-2xl font-bold text-slate-800 dark:text-white">Good Morning, Jane</h3>
-<p class="text-slate-500 dark:text-slate-400">Here's what's happening with IntelliTea today.</p>
-</div>
-<!-- Stats Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-<!-- Card 1 -->
-<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-primary/5 shadow-sm hover:shadow-md transition-shadow">
-<div class="flex items-center justify-between mb-4">
-<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-<span class="material-symbols-outlined">shopping_cart</span>
-</div>
-<span class="text-emerald-500 text-sm font-bold flex items-center bg-emerald-50 px-2 py-1 rounded-full">
-<span class="material-symbols-outlined text-xs">trending_up</span> 12%
-                            </span>
-</div>
-<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Orders</p>
-<h4 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">1,284</h4>
-</div>
-<!-- Card 2 -->
-<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-primary/5 shadow-sm hover:shadow-md transition-shadow">
-<div class="flex items-center justify-between mb-4">
-<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-<span class="material-symbols-outlined">local_shipping</span>
-</div>
-<span class="text-emerald-500 text-sm font-bold flex items-center bg-emerald-50 px-2 py-1 rounded-full">
-<span class="material-symbols-outlined text-xs">trending_up</span> 5%
-                            </span>
-</div>
-<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Active Deliveries</p>
-<h4 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">42</h4>
-</div>
-<!-- Card 3 -->
-<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-primary/5 shadow-sm hover:shadow-md transition-shadow">
-<div class="flex items-center justify-between mb-4">
-<div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600">
-<span class="material-symbols-outlined">warning</span>
-</div>
-<span class="text-red-500 text-sm font-bold flex items-center bg-red-50 px-2 py-1 rounded-full">
-<span class="material-symbols-outlined text-xs">trending_down</span> 2%
-                            </span>
-</div>
-<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Complaints</p>
-<h4 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">12</h4>
-</div>
-<!-- Card 4 -->
-<div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-primary/5 shadow-sm hover:shadow-md transition-shadow">
-<div class="flex items-center justify-between mb-4">
-<div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-<span class="material-symbols-outlined">question_answer</span>
-</div>
-<span class="text-emerald-500 text-sm font-bold flex items-center bg-emerald-50 px-2 py-1 rounded-full">
-<span class="material-symbols-outlined text-xs">trending_up</span> 8%
-                            </span>
-</div>
-<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Customer Queries</p>
-<h4 class="text-2xl font-bold text-slate-800 dark:text-white mt-1">28</h4>
-</div>
-</div>
-<!-- Recent Activity & Map Simulation -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
-<div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-primary/5 overflow-hidden shadow-sm">
-<div class="p-6 border-b border-primary/5 flex items-center justify-between">
-<h5 class="font-bold">Live Tracking</h5>
-<button class="text-primary text-sm font-semibold hover:underline">View Map</button>
-</div>
-<div class="h-64 bg-slate-100 relative">
-<div class="absolute inset-0 flex items-center justify-center">
-<div class="w-full h-full bg-slate-200" data-location="London" style="">
-<div class="absolute inset-0 flex items-center justify-center">
-<div class="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
-<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-<span class="material-symbols-outlined text-primary text-4xl animate-bounce">location_on</span>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="bg-white dark:bg-slate-900 rounded-xl border border-primary/5 p-6 shadow-sm">
-<h5 class="font-bold mb-6">Pending Queries</h5>
-<div class="space-y-6">
-<div class="flex gap-4">
-<div class="w-2 h-2 mt-2 rounded-full bg-primary shrink-0"></div>
-<div>
-<p class="text-sm font-semibold">Tea delivery delayed in Sector 4</p>
-<p class="text-xs text-slate-500 mt-1">Ticket #4928 • 10m ago</p>
-</div>
-</div>
-<div class="flex gap-4">
-<div class="w-2 h-2 mt-2 rounded-full bg-orange-400 shrink-0"></div>
-<div>
-<p class="text-sm font-semibold">Change of delivery address</p>
-<p class="text-xs text-slate-500 mt-1">Ticket #4927 • 25m ago</p>
-</div>
-</div>
-<div class="flex gap-4">
-<div class="w-2 h-2 mt-2 rounded-full bg-slate-300 shrink-0"></div>
-<div>
-<p class="text-sm font-semibold">Bulk order discount inquiry</p>
-<p class="text-xs text-slate-500 mt-1">Ticket #4925 • 1h ago</p>
-</div>
-</div>
-</div>
-<button class="w-full mt-8 py-3 rounded-xl border-2 border-primary/20 text-primary font-bold hover:bg-primary hover:text-white transition-all">
-                            View All Queries
-                        </button>
-</div>
-</div>
-</div>
-<!-- Mobile Bottom Nav -->
-<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-primary/10 px-4 py-2 flex items-center justify-between z-50">
-<a class="flex flex-col items-center gap-1 text-primary" href="#">
-<span class="material-symbols-outlined">dashboard</span>
-<span class="text-[10px] font-bold">Home</span>
-</a>
-<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined">package_2</span>
-<span class="text-[10px] font-bold">Orders</span>
-</a>
-<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined">chat_bubble</span>
-<span class="text-[10px] font-bold">Chat</span>
-</a>
-<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
-<span class="material-symbols-outlined">map</span>
-<span class="text-[10px] font-bold">Tracking</span>
-</a>
-</div>
+
+<main class="relative z-10 flex-1 flex flex-col justify-center overflow-hidden">
+    <div class="absolute inset-0 -z-10 opacity-20 dark:opacity-10 pointer-events-none">
+        <div class="absolute top-1/4 left-1/2 w-64 h-64 bg-primary/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div class="absolute bottom-1/4 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl translate-x-1/4"></div>
+    </div>
+
+    <section class="px-6 pt-8 pb-6 text-center">
+        <h1 class="text-4xl sm:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mb-4 mx-auto max-w-sm">
+           IntelliTea
+        </h1>
+        <p class="text-base sm:text-lg text-slate-600 dark:text-slate-500 max-w-[280px] sm:max-w-xs mx-auto leading-relaxed">
+           <b>(BY CHARAN SINGH & SONS)</b> <br> Experience the taste of Tea World with us.
+        </p>
+    </section>
+
+    <section class="px-6 mb-10">
+        <div class="max-w-md mx-auto">
+            <a href="phone-page.html" class="block w-full no-underline">
+                <button class="w-full h-14 bg-primary text-black font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98] hover:opacity-90 transition-all">
+                    <span class="material-symbols-outlined">phone_iphone</span>
+                    Continue with Phone
+                </button> 
+            </a>
+            <p class="mt-4 text-center text-[10px] sm:text-xs text-slate-500">
+                By continuing, you agree to our Terms of Service.
+            </p>
+        </div>
+    </section>
+
+    <section class="px-6 pb-28">
+        <div class="flex flex-col md:flex-row justify-between gap-4 max-w-md mx-auto w-full px-4">
+            <div class="flex-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-white shadow-lg flex items-center md:flex-col gap-4 text-left md:text-center transition-all hover:scale-[1.02]">
+                <div class="bg-primary/20 p-3 rounded-xl flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary text-2xl">support_agent</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm leading-tight text-slate-900 dark:text-slate-100 mb-0.5">24/7 Support</h3>
+                    <p class="text-[11px] leading-snug text-slate-500">Expert tea help available anytime.</p>
+                </div>
+            </div>
+            <div class="flex-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-white shadow-lg flex items-center md:flex-col gap-4 text-left md:text-center transition-all hover:scale-[1.02]">
+                <div class="bg-primary/20 p-3 rounded-xl flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary text-2xl">local_shipping</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm leading-tight text-slate-900 dark:text-slate-100 mb-0.5">Express Ship</h3>
+                    <p class="text-[11px] leading-snug text-slate-500">Delivery as soon as possible.</p>
+                </div>
+            </div>
+            <div class="flex-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-white shadow-lg flex items-center md:flex-col gap-4 text-left md:text-center transition-all hover:scale-[1.02]">
+                <div class="bg-primary/20 p-3 rounded-xl flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary text-2xl">psychology</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm leading-tight text-slate-900 dark:text-slate-100 mb-0.5">Smart AI</h3>
+                    <p class="text-[11px] leading-snug text-slate-500">Order with AI precision.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 </main>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
-    const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
-    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function protectPage() {
-        const { data: { user } } = await _supabase.auth.getUser();
+<nav class="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-white/10 dark:bg-black/10 backdrop-blur-2xl px-4 pb-6 pt-3 z-[100]">
+    <div class="flex gap-2 max-w-md mx-auto">
+        <a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="landing-page.html">
+            <span class="material-symbols-outlined">home</span>
+            <p class="text-xs font-medium">Home</p>
+        </a>
+        <a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="recipe.html">
+            <span class="material-symbols-outlined">menu_book</span>
+            <p class="text-xs font-medium">Recipes</p>
+        </a>
+    </div>
+</nav>
 
-        if (!user) {
-            window.location.href = 'signin.html';
-            return;
-        }
+<div class="fixed inset-0 leaf-pattern pointer-events-none z-[100]"></div>
 
-        // Verify they are still authorized
-        const { data, error } = await _supabase
-            .from('authorized_admins')
-            .select('email')
-            .eq('email', user.email)
-            .single();
-
-        if (error || !data) {
-            alert("Unauthorized access detected.");
-            await _supabase.auth.signOut();
-            window.location.href = 'signin.html';
-        }
-    }
-
-    protectPage();
-</script>
-</body></html>
+</body>
+</html>

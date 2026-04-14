@@ -30,7 +30,7 @@ else:
 
 # Initialize Groq Client (It automatically finds GROQ_API_KEY in your .env file)
 
-client = Groq(api_keys=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 business_context = """
 You are the AI helper for 'Charan Singh & Sons', a legitimate tea business.

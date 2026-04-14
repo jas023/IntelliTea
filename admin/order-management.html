@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IntelliTea Admin - Orders Management</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#709c16",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#1c2111",
+                    },
+                    fontFamily: { "display": ["Plus Jakarta Sans"] },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_RjeSJc4Onq2kyDA975W7goJYKS_hq0gB1ABzC20UPu5vlbvuFPuS0hEVVp6spwBRyOmL8yDFnOmlNxbhni9T8-spXgfZ9izCcvSh42Cag2qibOYRPb2bPWrxa9B0k1xRubNBhwaW8fY2W0bT-volAn2KyU2psbhPZLzrhhyeJHLdfd_4A-380zipl_Td2qHuZOlSdFnEM8j4DpQm5SNDuzXTs_Zpm6mPFcj_IY_IX0HhXCm6z5NZx0bFsmarWy3Nen91kJL92uNF');
+           
+            background-repeat: no-repeat;
+            background-size: cover;
+             opacity: 0.5; 
+             filter: blur(2px);  
+            mix-blend-mode: multiply; 
+            position: fixed;
+            inset: 0;
+        }
+        .bg-white {
+            background-color: rgba(255, 255, 255, 0.8) ;
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="bg-background-light font-display text-slate-900 min-h-screen">
+    <div class="flex flex-col min-h-screen">
+        <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-primary/10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    <div class="flex items-center gap-4">
+                        <img src="logo2.png" alt="IntelliTea Logo" class="h-12 w-12 object-contain rounded-lg shadow-sm">
+                        <div class="flex flex-col">
+                            <h1 class="text-xl font-bold tracking-tight text-primary leading-none">IntelliTea</h1>
+                            <span class="text-[10px] text-primary/60 font-bold uppercase tracking-tighter">Charan Singh & Sons</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <!-- <button class="p-2 text-slate-500 hover:bg-primary/10 rounded-full">
+                            <span class="material-symbols-outlined">notifications</span>
+                        </button> -->
+                        <div class="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-primary/30">
+                            <img alt="Admin" src="https://ui-avatars.com/api/?name=Admin&background=709c16&color=fff"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl border border-primary/10 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-primary/10 text-primary rounded-lg">
+                            <span class="material-symbols-outlined">shopping_basket</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Total Orders</p>
+                            <p id="totalOrdersCount" class="text-2xl font-bold">--</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-primary/10 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
+                            <span class="material-symbols-outlined">pending_actions</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Pending</p>
+                            <p id="pendingOrdersCount" class="text-2xl font-bold">--</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-primary/10 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
+                            <span class="material-symbols-outlined">check_circle</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Delivered</p>
+                            <p id="deliveredOrdersCount" class="text-2xl font-bold">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-primary/10 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-primary/10">
+                    <h2 class="text-lg font-bold">Orders Management</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50">
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Order ID</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Customer</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Address</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody" class="divide-y divide-slate-100">
+                            <tr><td colspan="5" class="p-10 text-center text-slate-400">Loading orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="orderModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-primary/10 flex justify-between items-center">
+            <h3 class="text-xl font-bold text-primary">Order Details</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-red-500">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div id="modalContent" class="p-6 space-y-4">
+            </div>
+        <div class="p-4 bg-slate-50 text-right">
+            <button onclick="closeModal()" class="px-6 py-2 bg-primary text-white font-bold rounded-xl">Close</button>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
+        const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function fetchOrders() {
+            console.log("Fetching real data...");
+            const { data: orders, error } = await _supabase
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                alert("Supabase Error: " + error.message);
+                return;
+            }
+
+            const tableBody = document.getElementById('ordersTableBody');
+            tableBody.innerHTML = ''; 
+
+            if (orders.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center">No orders found in database.</td></tr>';
+            }
+
+           orders.forEach(order => {
+    const row = `
+        <tr class="hover:bg-primary/5 transition-colors border-b border-primary/5">
+            <td class="px-6 py-4 whitespace-nowrap font-bold text-primary">#${order.id}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">${order.items || 'Tea Order'}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">${order.address || 'No Address Provided'}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase 
+                    ${order.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                    ${order.status}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-right flex justify-end items-center gap-3">
+                ${order.status !== 'delivered' ? `
+                    <button onclick="updateOrderStatus(${order.id}, 'delivered')" 
+                            class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full hover:bg-primary/90 transition-all">
+                        MARK DELIVERED
+                    </button>
+                ` : `
+                    <span class="text-[10px] text-green-600 font-bold uppercase">Finished</span>
+                `}
+                
+                <button onclick='viewOrder(${JSON.stringify(order)})' class="text-primary font-bold text-xs hover:underline">
+                    VIEW
+                </button>
+
+                <button onclick="deleteOrder(${order.id})" class="text-red-400 hover:text-red-600">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+            </td>
+        </tr>
+    `;
+    tableBody.innerHTML += row;
+});
+
+            // Update stats
+            document.getElementById('totalOrdersCount').innerText = orders.length;
+            document.getElementById('pendingOrdersCount').innerText = orders.filter(o => o.status !== 'delivered').length;
+            document.getElementById('deliveredOrdersCount').innerText = orders.filter(o => o.status === 'delivered').length;
+        }
+
+        fetchOrders();
+
+        async function updateOrderStatus(orderId, newStatus) {
+    const confirmation = confirm(`Are you sure you want to mark Order #${orderId} as ${newStatus}?`);
+    
+    if (confirmation) {
+        const { error } = await _supabase
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', orderId);
+
+        if (error) {
+            alert("Error updating order: " + error.message);
+        } else {
+            alert("Order #" + orderId + " updated to " + newStatus + "!");
+            // Refresh the list to show the change
+            fetchOrders(); 
+        }
+    }
+}
+
+async function deleteOrder(orderId) {
+    if (confirm(`Are you sure you want to delete Order #${orderId}? This cannot be undone.`)) {
+        const { error } = await _supabase
+            .from('orders')
+            .delete()
+            .eq('id', orderId);
+
+        if (error) {
+            alert("Error: " + error.message);
+        } else {
+            fetchOrders(); // Refresh table
+        }
+    }
+}
+
+function viewOrder(order) {
+    const modal = document.getElementById('orderModal');
+    const content = document.getElementById('modalContent');
+    
+    content.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Order ID</p><p class="font-semibold">#${order.id}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Status</p><p class="font-semibold uppercase text-primary">${order.status}</p></div>
+            <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Items Ordered</p><p class="font-semibold">${order.items}</p></div>
+            <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Delivery Address</p><p class="text-sm">${order.address}</p></div>
+            <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Order Date</p><p class="text-sm">${new Date(order.created_at).toLocaleString()}</p></div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('orderModal').classList.add('hidden');
+}
+    </script>
+</body>
+</html>

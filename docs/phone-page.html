@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Phone Number Entry - Tea Brand</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -54,7 +54,32 @@
             background-color: rgba(0, 0, 0, 0.5);
         }
         .ios-keypad-btn {
-            @apply h-12 sm:h-14 rounded-xl bg-white/80 dark:bg-white/10 flex flex-col items-center justify-center font-semibold text-xl sm:text-2xl shadow-sm active:bg-slate-200 dark:active:bg-white/20 transition-colors duration-100;
+            height: 3rem;
+            border-radius: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.25rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: background-color 100ms;
+        }
+        .ios-keypad-btn:active {
+            background-color: rgb(226, 232, 240);
+        }
+        @media (min-width: 640px) {
+            .ios-keypad-btn {
+                height: 3.5rem;
+                font-size: 1.5rem;
+            }
+        }
+        .dark .ios-keypad-btn {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .dark .ios-keypad-btn:active {
+            background-color: rgba(255, 255, 255, 0.2);
         }
     </style>
 </head>
@@ -64,7 +89,7 @@
         
         <div class="relative z-10 flex flex-col h-full">
             <nav class="flex items-center px-6 pt-8 sm:pt-12 mb-4">
-    <a href="landing-page.html" class="flex items-center justify-center size-10 rounded-full bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 hover:bg-white/60 transition-all">
+    <a href="index.html" class="flex items-center justify-center size-10 rounded-full bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 hover:bg-white/60 transition-all">
         <span class="material-symbols-outlined text-slate-900 dark:text-slate-100 text-xl leading-none">arrow_back_ios_new</span>
     </a>
 </nav>
@@ -77,13 +102,13 @@
   <div class="px-6 space-y-4 flex-none">
     <div class="flex flex-col gap-3">
         <div>
-            <label class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Full Name <span class="text-red-500">*</span></label>
+            <label for="name-input" class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Full Name <span class="text-red-500">*</span></label>
             <input id="name-input" type="text" placeholder="Enter your name" class="w-full h-12 bg-white/90 dark:bg-black/40 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-2xl px-4 text-base font-bold focus:ring-2 focus:ring-primary outline-none transition-all">
         </div>
 
         <div class="flex gap-2">
             <div class="w-24">
-                <label class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Country</label>
+                <label for="country-code" class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Country</label>
                 <select id="country-code" class="w-full h-12 bg-white/90 dark:bg-black/40 border border-white/50 dark:border-white/10 rounded-2xl px-2 text-sm font-bold focus:ring-2 focus:ring-primary outline-none">
                     <option value="+91">in +91</option>
                     <option value="+1">🇺🇸 +1</option>
@@ -91,7 +116,7 @@
                 </select>
             </div>
             <div class="flex-1">
-                <label class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Phone Number <span class="text-red-500">*</span></label>
+                <label for="phone-display" class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Phone Number <span class="text-red-500">*</span></label>
                 <input class="w-full h-12 bg-white/90 dark:bg-black/40 border border-white/50 dark:border-white/10 rounded-2xl px-4 text-lg font-bold tracking-widest outline-none" id="phone-display" placeholder="0000000000" type="text" inputmode="numeric"/>
             </div>
         </div>
@@ -120,7 +145,7 @@
     </button>
 </div>
 
-<div id="confirm-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm hidden">
+<div id="confirm-modal" class="fixed inset-0 z-[100] items-center justify-center p-6 bg-black/60 backdrop-blur-sm hidden">
     <div class="bg-white dark:bg-background-dark w-full max-w-sm rounded-[2rem] p-8 shadow-2xl text-center">
         <h3 class="text-xl font-bold mb-2">Is this correct?</h3>
         <p class="text-slate-500 mb-6">We will call you at:<br><span id="display-final-num" class="text-slate-900 dark:text-white font-bold text-lg"></span></p>
@@ -160,11 +185,15 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         if (phone.replace(/\D/g, '').length < 10) { alert("Please enter your 10-digit phone number"); return; }
 
         document.getElementById('display-final-num').innerText = code + " " + phone;
-        document.getElementById('confirm-modal').classList.remove('hidden');
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     }
 
     function hideConfirmation() {
-        document.getElementById('confirm-modal').classList.add('hidden');
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
     }
 
     async function submitData() {

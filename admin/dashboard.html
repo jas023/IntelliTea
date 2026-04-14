@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>IntelliTea Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#709c16",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#1c2111",
+                    },
+                    fontFamily: { "display": ["Plus Jakarta Sans"] },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        .leaf-pattern {
+            background-image: radial-gradient(#709c16 0.5px, transparent 0.5px), radial-gradient(#709c16 0.5px, #f7f8f6 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0.05;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_RjeSJc4Onq2kyDA975W7goJYKS_hq0gB1ABzC20UPu5vlbvuFPuS0hEVVp6spwBRyOmL8yDFnOmlNxbhni9T8-spXgfZ9izCcvSh42Cag2qibOYRPb2bPWrxa9B0k1xRubNBhwaW8fY2W0bT-volAn2KyU2psbhPZLzrhhyeJHLdfd_4A-380zipl_Td2qHuZOlSdFnEM8j4DpQm5SNDuzXTs_Zpm6mPFcj_IY_IX0HhXCm6z5NZx0bFsmarWy3Nen91kJL92uNF');
+           
+            background-repeat: no-repeat;
+            background-size: cover;
+            opacity: 0.5; 
+            z-index: -1;
+        }
+        .bg-white {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light text-slate-900 min-h-screen">
+    <div class="flex min-h-screen relative">
+        <aside class="hidden lg:flex flex-col w-72 bg-white border-r border-primary/10 p-6 fixed h-full z-40">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <img src="logo2.png" alt="IntelliTea Logo" class="h-10 w-10 object-contain rounded-lg">
+                <div class="flex flex-col">
+                    <h1 class="text-lg font-bold tracking-tight text-primary leading-none">IntelliTea</h1>
+                    <span class="text-[9px] text-primary/60 font-bold uppercase tracking-tighter">Charan Singh & Sons</span>
+                </div>
+            </div>
+
+            <nav class="flex-1 space-y-2">
+                <a class="flex items-center gap-3 px-4 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 transition-all" href="dashboard.html">
+                    <!-- <span class="material-symbols-outlined">dashboard</span> -->
+                    <span class="font-semibold">Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-primary/10 hover:text-primary rounded-xl transition-all" href="order-management.html">
+                    <!-- <span class="material-symbols-outlined">package_2</span> -->
+                    <span class="font-semibold">Orders</span>
+                </a>
+                
+                <button onclick="handleLogout()" class="flex w-full items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-all mt-10">
+                    <!-- <span class="material-symbols-outlined">logout</span> -->
+                    <span class="font-semibold">Logout</span>
+                </button>
+            </nav>
+
+            <div class="mt-auto p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                <div class="flex items-center gap-3">
+                    <img class="w-10 h-10 rounded-full object-cover" alt="Admin" src="https://ui-avatars.com/api/?name=Admin&background=709c16&color=fff"/>
+                    <div>
+                        <p id="adminNameDisplay" class="text-sm font-bold">Admin</p>
+                        <p class="text-xs text-slate-500">Super User</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 lg:ml-72 flex flex-col relative">
+            <div class="absolute inset-0 leaf-pattern pointer-events-none"></div>
+            
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-primary/5">
+                <h2 class="text-xl font-bold text-slate-800">Main Dashboard</h2>
+            </header>
+
+            <div class="p-6 relative z-10">
+                <div class="mb-8">
+                    <h3 class="text-2xl font-bold text-slate-800">Welcome back!</h3>
+                    <p class="text-slate-500">Here is a real-time overview of IntelliTea.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
+                        <!-- <div class="w-12 h-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
+                            <span class="material-symbols-outlined">shopping_cart</span>
+                        </div> -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
+        <p class="text-slate-500 text-sm font-medium">Total Orders</p>
+        <h4 id="realTotalOrders" class="text-2xl font-bold mt-1">0</h4>
+    </div>
+
+                    <!-- <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
+                        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                            <span class="material-symbols-outlined">group</span>
+                        </div>
+                        <p class="text-slate-500 text-sm font-medium">Admin Staff</p>
+                        <h4 id="adminCount" class="text-2xl font-bold mt-1">...</h4>
+                    </div>
+                </div>
+            </div> -->
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
+        const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function loadDashboardData() {
+            // 1. Fetch Total Orders
+            const { count: orderCount, error: orderError } = await _supabase
+                .from('orders')
+                .select('*', { count: 'exact', head: true });
+            
+            if (!orderError) {
+                document.getElementById('realTotalOrders').innerText = orderCount || 0;
+            }
+
+            // 2. Fetch Admin Count (from your whitelist table)
+            const { count: staffCount, error: staffError } = await _supabase
+                .from('authorized_admins')
+                .select('*', { count: 'exact', head: true });
+            
+            if (!staffError) {
+                document.getElementById('adminCount').innerText = staffCount || 0;
+            }
+        }
+
+        async function protectPage() {
+            const { data: { user }, error: authError } = await _supabase.auth.getUser();
+
+            if (!user || authError) {
+                window.location.href = 'signin.html';
+                return;
+            }
+
+            const { data, error } = await _supabase
+                .from('authorized_admins')
+                .select('email')
+                .eq('email', user.email)
+                .single();
+
+            if (error || !data) {
+                alert("Access Denied.");
+                await _supabase.auth.signOut();
+                window.location.href = 'signin.html';
+            } else {
+                document.getElementById('adminNameDisplay').innerText = user.email.split('@')[0];
+                // Load the stats since we are authorized
+                loadDashboardData();
+            }
+        }
+
+        async function handleLogout() {
+            await _supabase.auth.signOut();
+            window.location.href = 'signin.html';
+        }
+
+        protectPage();
+    </script>
+</body>
+</html>

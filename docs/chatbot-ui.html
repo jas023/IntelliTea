@@ -168,14 +168,14 @@ async function handleSend(buttonText = null) {
   }
 
     // 4. Save to browser memory
-    localStorage.setItem("intelliTeaTotal", finalAmount);
+   // localStorage.setItem("intelliTeaTotal", finalAmount);
 
-    addMessage("Opening secure UPI gateway...", true);
-    setTimeout(() => {
-        window.location.href = "payment.html";
-    }, 1200);
-    return;
-}
+    //addMessage("Opening secure UPI gateway...", true);
+    //setTimeout(() => {
+      //  window.location.href = "payment.html";
+    //}, 1200);
+    //return;
+
 
   // If the user clicks the about button, redirect them immediately!
   if (text === "Know About") {
@@ -184,7 +184,7 @@ async function handleSend(buttonText = null) {
           // Change this to your actual about page URL
           window.location.href = "about-page.html"; 
       }, 1500);
-      return; 
+     console.log("empty"); 
   }
   // --------------------------------
 
@@ -210,7 +210,7 @@ async function handleSend(buttonText = null) {
     console.error("Connection Error:", error);
     addMessage("Server disconnected?", true);
   }
-
+}
 
 sendBtn.addEventListener('click', () => handleSend());
 chatInput.addEventListener('keypress', (e) => {

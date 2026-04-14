@@ -39,14 +39,21 @@
             filter: grayscale(1) sepia(1) hue-rotate(60deg) saturate(2);
         }
         .bg-overlay {
-            @apply fixed inset-0 z-[-1];
-            background-color: rgba(255, 255, 255, 0.8);
+           position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: rgba(255, 255, 255, 0.8);
         }
         .dark .bg-overlay {
             background-color: rgba(19, 34, 16, 0.9);
         }
         .fullscreen-bg {
-            @apply fixed inset-0 z-[-1] w-full h-full object-cover;
+            position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
         }
     </style>
 <style>
@@ -70,7 +77,7 @@
 <img alt="Single green leaf texture" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFI8y7qxnEwerEts9uh_6TbbRsi6vbNKT3UpvIei8G8_nMgecQZdHASTFMsS-CyhHmWzMBIAwdOS1m3pKLCCm2iLrQw3qYvB-zbsFG5d_y_Rt4urmWwB3l_potSV0hpS0wQ7Cj8T2RdJJB0a10rV0YbEdTcpqU_I04jslNTW2JVQtvuAzwUlb6VtTkzDEvtRrJR85QSpg03fyH4p9756aJbiTSmF-xi2ILbZ67Dpl6j0lPpi7P97oSuS_jF0EvKmFHouLCRIFG_Ps"/>
 </div> -->
 <header class="sticky top-0 z-50 flex items-center justify-between px-4 py-4 bg-transparent backdrop-blur-sm">
-<button onclick="window.location.href='landing-page.html'" class="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 dark:bg-black/20 hover:bg-primary/10 transition-colors">
+<button onclick="window.location.href='index.html'" class="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 dark:bg-black/20 hover:bg-primary/10 transition-colors">
 <span class="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back_ios_new</span>
 </button>
 <!-- <div class="flex items-center gap-2"> -->
@@ -78,7 +85,7 @@
 <!-- <span class="material-symbols-outlined text-background-dark text-sm">eco</span> -->
 <!-- </div> -->
 <!-- </div> -->
- <a href="landing-page.html" class="flex items-center gap-2 hover:scale-105 transition-transform">
+ <a href="index.html" class="flex items-center gap-2 hover:scale-105 transition-transform">
     <img src="./logo2.png" alt="Logo" class="h-12 w-auto object-contain">
     <span class="font-bold text-lg tracking-tight text-slate-900 dark:text-slate-100"></span>
 </a>
@@ -119,7 +126,7 @@
 <span class="text-sm font-bold tracking-wide">Amritsar, Punjab</span> 
 </div>
 <!-- <div class="w-full h-40 rounded-xl overflow-hidden border border-primary/20 shadow-md"> -->
-     <a href="https://share.google/IH4tUtkjWxmokGLaK" target="_blank" class="w-full h-40 rounded-xl overflow-hidden border border-primary/20 shadow-md">
+     <a href="https://share.google/IH4tUtkjWxmokGLaK" target="_blank" rel="noopener noreferrer" class="w-full h-40 rounded-xl overflow-hidden border border-primary/20 shadow-md">
 <img alt="Map" class="w-full h-full object-cover grayscale dark:invert dark:opacity-70" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCygVDTSjiWc5Uudk4kSNfG15C9HOM3HUNDHHfKPGDSff1pr5vxAUNYh9awuIqEbTYNkAiq0zEL5Ih-uVqan_R2yZ2FRHuxzvvXLiJ7gaJgn2eH8RHEEoqJozDslNPQo8J5wHAWNunWK4-jwHYyAajppecOU589Pksb_cYRO54S6sXqlujYwxZQCPr7NCpUuZRvL_3w4KM4WLIIG-R1ryNio5l3Uc_jmfKhaPzPacDn8_OUoDvWDhlDNUeKj3TeY1ZaLzKVwQCNeTo"/></a>
 </div>
 <!-- </div> -->

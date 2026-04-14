@@ -2,5 +2,5 @@ flask
 flask -cors
 python-dotenv
 groq
-supabase
+supabase==2.3.0
 razorpay
