@@ -129,6 +129,53 @@ function addMessage(text, isAi) {
   chatMain.scrollTop = chatMain.scrollHeight;
   }
 
+function parseAmountFromText(text) {
+  let cleaned = text.replace(/,/g, '');
+
+  // Remove quantity mentions like "2 kg", "3kg", "50 g", "100g" so they don't get mistaken for totals.
+  cleaned = cleaned.replace(/\b\d+(?:\.\d+)?\s*(?:kg|kgs|kilogram|kilograms|g|gram|grams|ltr|liter|litre|ml|pcs|pieces|pack|packs|packet|packets)\b/gi, '');
+
+  // Prefer explicit totals with arithmetic expressions, e.g. "total bill is 2000 + 350 = 2350 rupees".
+  const explicitSumMatch = cleaned.match(/(?:total|grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|amount is|total is|final amount|net amount)[^=]{0,80}=\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
+  if (explicitSumMatch && explicitSumMatch[1]) {
+      return String(parseFloat(explicitSumMatch[1]) || 0);
+  }
+
+  // Prefer explicit total phrases followed by a rupee amount.
+  const explicitTotalMatch = cleaned.match(/(?:total|grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|amount is|total is|final amount|net amount).*?([0-9]+(?:\.[0-9]{1,2})?)\s*(?:rupees|INR|Rs|₹)/i);
+  if (explicitTotalMatch && explicitTotalMatch[1]) {
+      return String(parseFloat(explicitTotalMatch[1]) || 0);
+  }
+
+  // Look for rupee amounts after total keywords.
+  const rupeeMatches = [...cleaned.matchAll(/([0-9]+(?:\.[0-9]{1,2})?)\s*(?:rupees|INR|Rs|₹)/gi)].map(match => parseFloat(match[1]));
+  if (rupeeMatches.length > 0 && hasTotalKeywords(cleaned)) {
+      return String(Math.max(...rupeeMatches));
+  }
+
+  // Fallback: if the message mentions total, choose the largest number over 10.
+  if (hasTotalKeywords(cleaned)) {
+      const allNumbers = cleaned.match(/\d+(?:\.\d{1,2})?/g);
+      if (allNumbers && allNumbers.length > 0) {
+          const numbers = allNumbers.map(n => parseFloat(n)).filter(n => n > 10);
+          if (numbers.length > 0) {
+              return String(Math.max(...numbers));
+          }
+      }
+  }
+
+  return null;
+}
+
+function hasTotalKeywords(text) {
+  const cleaned = text.replace(/,/g, '');
+  return /(?:total amount|amount to pay|amount due|grand total|final total|bill amount|total bill|order total|invoice total|total is|amount is|comes to|comes out to|equals?)/i.test(cleaned);
+}
+
+function shouldStoreTotal(text) {
+  return hasTotalKeywords(text);
+}
+
 // Notice handleSend now accepts an optional parameter!
 async function handleSend(buttonText = null) {
   const text = buttonText || chatInput.value.trim();
@@ -140,31 +187,58 @@ async function handleSend(buttonText = null) {
       let finalAmount = "0";
 
       if (aiMessages.length > 0) {
-          // Get text and remove any commas (e.g., 1,200 becomes 1200)
-          const lastMsg = aiMessages[aiMessages.length - 1].innerText.replace(/,/g, '');
-          const amountMatch = lastMsg.match(/(?:₹|Rs|Total:?)\s*(\d+)/i) || lastMsg.match(/(\d+)\s*(?:Rupees|INR)/i);
-          
-          if (amountMatch && amountMatch[1]) {
-              finalAmount = amountMatch[1]; 
-          } else {
-              // Fallback: just find the very last number in the string
-              const allNumbers = lastMsg.match(/\d+/g);
-              if (allNumbers) finalAmount = allNumbers[allNumbers.length - 1];
+              // Search backwards through AI messages to find the bill/total message.
+              // We may still need to parse the same message that has "Order saved!".
+              for (let i = aiMessages.length - 1; i >= 0; i--) {
+                  const msgText = aiMessages[i].innerText;
+                  console.log(`Checking message ${i}:`, msgText); // Debug log
+              const parsedAmount = parseAmountFromText(msgText);
+              if (parsedAmount && parsedAmount !== "0") {
+                  finalAmount = parsedAmount;
+                  console.log(`Found amount: ${finalAmount} from message:`, msgText); // Debug log
+                  break;
+              }
           }
-        }
+      }
 
-      // 1. Force save to LocalStorage
-      localStorage.setItem("intelliTeaTotal", String(finalAmount));
+      // If still 0, try one more time with all messages and be more aggressive
+      if (finalAmount === "0") {
+          for (let i = aiMessages.length - 1; i >= 0; i--) {
+              const msgText = aiMessages[i].innerText;
+              // Look for any number > 50 (likely a total, not a quantity)
+              const highNumbers = msgText.match(/\b(\d{2,})\b/g);
+              if (highNumbers) {
+                  const validNumbers = highNumbers.map(n => parseInt(n)).filter(n => n > 50);
+                  if (validNumbers.length > 0) {
+                      finalAmount = String(Math.max(...validNumbers));
+                      console.log(`Found high number amount: ${finalAmount} from message:`, msgText);
+                      break;
+                  }
+              }
+          }
+      }
 
-      // 2. Visual feedback
+      const storedAmount = localStorage.getItem("intelliTeaTotal");
+      if ((finalAmount === "0" || !finalAmount) && storedAmount && parseFloat(storedAmount) > 10) {
+          finalAmount = storedAmount;
+      }
+
+      if (!finalAmount || parseFloat(finalAmount) <= 10) {
+          localStorage.removeItem("intelliTeaTotal");
+          addMessage("I could not detect a valid total amount from the chat bill. Please review the AI response or ask the AI to re-send the final total.", true);
+          return;
+      }
+
+      console.log(`Final amount to store: ${finalAmount}`); // Debug log
+      localStorage.setItem("intelliTeaTotal", finalAmount);
+
       addMessage(`Final Total: ₹${finalAmount}. Opening payment...`, true);
-      
-      // 3. Short delay to ensure memory is written
+
       setTimeout(() => {
           window.location.href = "payment.html";
       }, 800);
 
-      return; // CRITICAL: This stops the function from sending "Proceed to Payment" to the AI
+      return;
   }
 
     // 4. Save to browser memory
@@ -202,6 +276,10 @@ async function handleSend(buttonText = null) {
 
     if (response.ok) {
         addMessage(data.reply, true);
+        const parsedAmount = parseAmountFromText(data.reply);
+        if (parsedAmount && parseFloat(parsedAmount) > 10 && hasTotalKeywords(data.reply)) {
+            localStorage.setItem("intelliTeaTotal", parsedAmount);
+        }
     } else {
         addMessage("Oops! Server error: " + data.error, true);
     }

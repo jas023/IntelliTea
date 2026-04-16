@@ -97,9 +97,10 @@
     // 1. Get the dynamic amount from the chat page
 const storedAmount = localStorage.getItem("intelliTeaTotal");
 console.log("Amount received from Chat:", storedAmount);
-if (!storedAmount || storedAmount === "0") {
+if (!storedAmount || storedAmount === "0" || parseFloat(storedAmount) <= 10) {
+        localStorage.removeItem("intelliTeaTotal");
         document.getElementById("total-amount").innerText = "₹0";
-        alert("Wait! No amount was detected. Please go back to the chat.");
+        alert("Wait! No valid amount was detected. Please go back to the chat and complete the order again.");
     } else {
         document.getElementById("total-amount").innerText = "₹" + storedAmount;
     }
@@ -122,5 +123,13 @@ document.getElementById("qr-image").src = qrUrl;
 // 5. Setup WhatsApp Message
 const waMsg = `Hello! I just paid ₹${storedAmount} for my tea order. Here is the screenshot.`;
 document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMsg)}`;
+
+const handlePayment = () => {
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    window.location.href = "upi://pay?pa=menkaarora022@okhdfcbank...";
+  } else {
+    alert("Please scan the QR code above to pay, as UPI apps are only available on mobile devices. & after paying share the screenshot on whatsapp to confirm your order.");
+  }
+};
 </script>
 </html>
