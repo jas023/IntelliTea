@@ -117,7 +117,7 @@
             </div>
             <div class="flex-1">
                 <label for="phone-display" class="block text-[10px] font-bold uppercase tracking-widest text-emerald-900 dark:text-emerald-400 mb-1 ml-1">Phone Number <span class="text-red-500">*</span></label>
-                <input class="w-full h-12 bg-white/90 dark:bg-black/40 border border-white/50 dark:border-white/10 rounded-2xl px-4 text-lg font-bold tracking-widest outline-none" id="phone-display" placeholder="0000000000" type="text" inputmode="numeric"/>
+                <input class="w-full h-12 bg-white/90 dark:bg-black/40 border border-white/50 dark:border-white/10 rounded-2xl px-4 text-lg font-bold tracking-widest outline-none" id="phone-display" placeholder="0000000000" type="text" inputmode="numeric" maxlength="10"/>
             </div>
         </div>
     </div>
@@ -164,25 +164,41 @@ SUPABASE_KEY="sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy"
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
+    function normalizeIndianMobile(raw) {
+        return String(raw || "").replace(/\D/g, '').slice(0, 10);
+    }
+
+    function isValidIndianMobile(phone) {
+        return /^[6-9]\d{9}$/.test(phone || "");
+    }
+
     function addNumber(num) {
         const display = document.getElementById('phone-display');
-        if(display.value.length < 10) {
-            display.value += num;
+        const normalized = normalizeIndianMobile(display.value);
+        if(normalized.length < 10) {
+            display.value = normalized + num;
         }
     }
 
     function backspace() {
         const display = document.getElementById('phone-display');
-        display.value = display.value.slice(0, -1);
+        const normalized = normalizeIndianMobile(display.value);
+        display.value = normalized.slice(0, -1);
     }
+
+    document.getElementById('phone-display').addEventListener('input', (e) => {
+        e.target.value = normalizeIndianMobile(e.target.value);
+    });
 
     function showConfirmation() {
         const name = document.getElementById('name-input').value;
-        const phone = document.getElementById('phone-display').value;
+        const phone = normalizeIndianMobile(document.getElementById('phone-display').value);
         const code = document.getElementById('country-code').value;
 
         if (!name) { alert("Please enter your name"); return; }
-        if (phone.replace(/\D/g, '').length < 10) { alert("Please enter your 10-digit phone number"); return; }
+        if (!isValidIndianMobile(phone)) { alert("Please enter a valid 10-digit mobile number starting with 6-9."); return; }
+
+        document.getElementById('phone-display').value = phone;
 
         document.getElementById('display-final-num').innerText = code + " " + phone;
         const modal = document.getElementById('confirm-modal');
@@ -202,7 +218,17 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const countryCode = document.getElementById('country-code');
 
     const name = nameInput.value;
-    const fullPhone = countryCode.value + phoneDisplay.value;
+    const localPhone = normalizeIndianMobile(phoneDisplay.value);
+    const fullPhone = countryCode.value + localPhone;
+
+    if (!name.trim()) {
+        alert("Please enter your name");
+        return;
+    }
+    if (!isValidIndianMobile(localPhone)) {
+        alert("Please enter a valid 10-digit mobile number starting with 6-9.");
+        return;
+    }
 
     // Change button text to show it's working
     const confirmBtn = event.target; 
@@ -219,6 +245,10 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             ]);
 
         if (error) throw error;
+
+        // Persist customer identity for checkout flow.
+        localStorage.setItem("intelliTeaCustomerPhone", localPhone);
+        localStorage.setItem("intelliTeaCustomerName", name);
 
         // 2. Success! Redirect to chatbot
         window.location.href = `chatbot-ui.html?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(fullPhone)}`;

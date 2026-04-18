@@ -3,7 +3,9 @@
 <html lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IntelliTea - Chat</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -31,12 +33,17 @@
     body {
       min-height: max(884px, 100dvh);
     }
+    .bg-tea-pattern {
+      background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCLXZ31TfnQsgTjA1zigw_L5G0DfNtDWUumZzYphUBmP2NPlSuJ48rVgY2eiuoKBgOAN7MCS8p873H8te5Y9qY6Yhh2tauXxRcsc7rup8WqTxMCs4U6jVTposYWgsjx3pziE3WmNrplC_VTMJkauCBZf4ePdhFFTaLw-J2u8GjrjJTC_X_lempskPHQ3xJUMOcdEltDXVeFsjqDxEAjzHnNUn8UXKcIjt0FPmkQiju_fuy37bdDcAeQLN8LCxWxzk-yLqtYOJULlcY');
+      background-size: cover;
+      background-position: center;
+    }
   </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
 <div class="relative flex h-screen w-full max-w-[480px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-hidden">
 <!-- Background Overlay (Tea Theme) -->
-<div class="absolute inset-0 z-0 opacity-10 pointer-events-none bg-cover bg-center" data-alt="Soft green tea leaves background pattern" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCLXZ31TfnQsgTjA1zigw_L5G0DfNtDWUumZzYphUBmP2NPlSuJ48rVgY2eiuoKBgOAN7MCS8p873H8te5Y9qY6Yhh2tauXxRcsc7rup8WqTxMCs4U6jVTposYWgsjx3pziE3WmNrplC_VTMJkauCBZf4ePdhFFTaLw-J2u8GjrjJTC_X_lempskPHQ3xJUMOcdEltDXVeFsjqDxEAjzHnNUn8UXKcIjt0FPmkQiju_fuy37bdDcAeQLN8LCxWxzk-yLqtYOJULlcY');">
+<div class="absolute inset-0 z-0 opacity-10 pointer-events-none bg-tea-pattern" data-alt="Soft green tea leaves background pattern">
 </div>
 <!-- Top Header -->
 <header class="relative z-10 flex flex-col items-center bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10 pt-4 pb-2">
@@ -80,6 +87,337 @@
 const chatMain = document.getElementById('chat-main');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
+
+const ORDER_STORAGE = {
+  total: "intelliTeaTotal",
+  finalTotal: "intelliTeaFinalTotal",
+  pendingItems: "intelliTeaPendingItems",
+  pendingAddress: "intelliTeaPendingAddress",
+  orderSaved: "intelliTeaOrderSaved",
+  orderId: "intelliTeaOrderId",
+  paymentStatus: "intelliTeaPaymentStatus",
+  utrNo: "intelliTeaUtrNo",
+  customerPhone: "intelliTeaCustomerPhone",
+  repeatPromptShown: "intelliTeaRepeatPromptShown",
+  repeatOrderData: "intelliTeaRepeatOrderData"
+};
+
+const SUPABASE_URL = "https://tmxxjzqzukphngjfkizs.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+const chatSupabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+const TEA_PRICES = {
+  "Black Gold (Black Tea)": 300,
+  "Green Gold (Green Tea/Kahwa)": 400,
+  "Kashmiri Tea (Noon Chai)": 500
+};
+
+const orderDraft = {
+  items: [],
+  masala: 0,
+  pendingTea: null,
+  expectingAddress: false,
+  address: ""
+};
+
+const repeatState = {
+  active: false,
+  orders: [],
+  selectedOrder: null,
+  awaitingNewAddress: false
+};
+
+function resetOrderState() {
+  localStorage.removeItem(ORDER_STORAGE.total);
+  localStorage.removeItem(ORDER_STORAGE.finalTotal);
+  localStorage.removeItem(ORDER_STORAGE.pendingItems);
+  localStorage.removeItem(ORDER_STORAGE.pendingAddress);
+  localStorage.removeItem(ORDER_STORAGE.orderSaved);
+  localStorage.removeItem(ORDER_STORAGE.orderId);
+  localStorage.removeItem(ORDER_STORAGE.paymentStatus);
+  localStorage.removeItem(ORDER_STORAGE.utrNo);
+  // Keep customer phone between sessions so users don't need to re-enter it in address.
+  localStorage.removeItem(ORDER_STORAGE.repeatPromptShown);
+  localStorage.removeItem(ORDER_STORAGE.repeatOrderData);
+  orderDraft.items = [];
+  orderDraft.masala = 0;
+  orderDraft.pendingTea = null;
+  orderDraft.expectingAddress = false;
+  orderDraft.address = "";
+}
+
+function validateAddressText(address) {
+  const text = (address || "").trim();
+  if (text.length < 15) {
+    return { valid: false, message: "Please enter a complete delivery address (minimum 15 characters)." };
+  }
+
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const alphaWords = normalized.match(/[A-Za-z]{3,}/g) || [];
+  if (alphaWords.length < 3) {
+    return { valid: false, message: "Please include a full address with locality, city and state details." };
+  }
+
+  if (normalized.split(',').length < 2) {
+    return { valid: false, message: "Please separate address parts using commas (for example: house, area, city, pincode)." };
+  }
+
+  if (/(.)\1{5,}/.test(normalized)) {
+    return { valid: false, message: "Address seems invalid. Please enter meaningful address details." };
+  }
+
+  const lower = normalized.toLowerCase();
+  const addressKeywords = /(house|flat|apt|apartment|road|rd|street|st|lane|ln|nagar|colony|sector|block|village|town|city|near|district|tehsil|po|post)/;
+  if (!addressKeywords.test(lower)) {
+    return { valid: false, message: "Please include proper address details like house/flat, road/area, city and pincode." };
+  }
+
+  // Require a non-pincode numeric token (house/flat/building number).
+  const hasNonPincodeNumber = /\b\d{1,5}[a-zA-Z]?\b/.test(lower.replace(/\b\d{6}\b/g, ''));
+  if (!hasNonPincodeNumber) {
+    return { valid: false, message: "Please include house/flat number along with the full address." };
+  }
+
+  // Reject likely gibberish words without vowels (e.g., "dfagbbbbbb").
+  const meaningfulWords = alphaWords.filter(w => /[aeiou]/i.test(w));
+  if (meaningfulWords.length < 2) {
+    return { valid: false, message: "Address appears invalid. Please enter a real locality, city and state." };
+  }
+
+  const uniqueWords = new Set(alphaWords.map(w => w.toLowerCase()));
+  if (uniqueWords.size < 3) {
+    return { valid: false, message: "Please avoid repeated/random words and enter a proper delivery address." };
+  }
+
+  const pinMatch = text.match(/\b\d{6}\b/);
+  if (!pinMatch) {
+    return { valid: false, message: "Please include a valid 6-digit pincode in your address." };
+  }
+
+  if (!/[a-zA-Z]/.test(text)) {
+    return { valid: false, message: "Address looks invalid. Please include street/locality and city details." };
+  }
+
+  if (!/[0-9]/.test(text)) {
+    return { valid: false, message: "Please include house/flat number and pincode in your address." };
+  }
+
+  const knownPhone = localStorage.getItem(ORDER_STORAGE.customerPhone);
+  const hasValidKnownPhone = /^[6-9]\d{9}$/.test(String(knownPhone || ""));
+  if (!hasValidKnownPhone && !extractPhoneFromText(text)) {
+    return { valid: false, message: "Please include your 10-digit phone number in the address message for delivery confirmation." };
+  }
+
+  return { valid: true, message: "" };
+}
+
+function seedCustomerPhoneFromEntry() {
+  const params = new URLSearchParams(window.location.search || "");
+  const phoneFromQuery = params.get("phone");
+  const phoneFromLocal = localStorage.getItem(ORDER_STORAGE.customerPhone);
+
+  if (phoneFromLocal) return;
+
+  const normalized = extractPhoneFromText(phoneFromQuery || "");
+  if (normalized) {
+    localStorage.setItem(ORDER_STORAGE.customerPhone, normalized);
+  }
+}
+
+function extractPhoneFromText(text) {
+  const normalized = (text || "").replace(/[^0-9+]/g, "");
+  const direct = normalized.match(/(?:\+?91)?([6-9]\d{9})/);
+  return direct && direct[1] ? direct[1] : null;
+}
+
+async function fetchRecentOrdersByPhone(phone, limit = 3) {
+  const directUrl = `${SUPABASE_URL}/rest/v1/orders?select=id,items,amount,address,status,created_at,customer_phone&customer_phone=eq.${encodeURIComponent(phone)}&order=created_at.desc&limit=${limit}`;
+  let response = await fetch(directUrl, {
+    method: "GET",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`
+    }
+  });
+
+  // Fallback for older schema where customer_phone column may not exist.
+  if (!response.ok) {
+    const fallbackUrl = `${SUPABASE_URL}/rest/v1/orders?select=id,items,amount,address,status,created_at&address=ilike.*${encodeURIComponent(phone)}*&order=created_at.desc&limit=${limit}`;
+    response = await fetch(fallbackUrl, {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    });
+  }
+
+  if (!response.ok) return null;
+  const rows = await response.json();
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  return rows;
+}
+
+function repeatButtonLabel(order, index) {
+  const amount = parseFloat(order.amount || 0);
+  return `Repeat Order ${index + 1} - Rs ${Number.isFinite(amount) ? amount : 0}`;
+}
+
+function findRepeatOrderByButton(buttonText) {
+  return repeatState.orders.find(order => order._buttonLabel === buttonText) || null;
+}
+
+async function startRepeatCustomerPrompt() {
+  const phone = localStorage.getItem(ORDER_STORAGE.customerPhone);
+  if (!phone) return false;
+
+  try {
+    const previousOrders = await fetchRecentOrdersByPhone(phone, 3);
+    if (!previousOrders || previousOrders.length === 0) return false;
+
+    repeatState.active = true;
+    repeatState.orders = previousOrders.map((order, index) => ({
+      ...order,
+      _buttonLabel: repeatButtonLabel(order, index)
+    }));
+    repeatState.selectedOrder = null;
+    repeatState.awaitingNewAddress = false;
+
+    const orderButtons = repeatState.orders.map(order => `[${order._buttonLabel}]`).join(" ");
+    addMessage(`Welcome back! You are our repeating customer. Here are your previous orders. Choose one to repeat or start a fresh order. ${orderButtons} [Start New Order]`, true);
+    return true;
+  } catch (error) {
+    console.error("Repeat customer prompt failed:", error);
+    return false;
+  }
+}
+
+function getOrderDraftTotal() {
+  const teaTotal = orderDraft.items.reduce((sum, item) => sum + (item.qty * item.pricePerKg), 0);
+  const totalKg = orderDraft.items.reduce((sum, item) => sum + item.qty, 0);
+  const courier = totalKg * 70;
+  return teaTotal + courier + orderDraft.masala;
+}
+
+function buildDraftItemsSummary() {
+  const teaText = orderDraft.items
+    .map(item => `${item.name}: ${item.qty}kg x Rs ${item.pricePerKg}`)
+    .join(", ");
+  const totalKg = orderDraft.items.reduce((sum, item) => sum + item.qty, 0);
+  const courier = totalKg * 70;
+  return `${teaText || "Tea order"}, Courier: Rs ${courier}, Masala: Rs ${orderDraft.masala}, Total: Rs ${getOrderDraftTotal()}`;
+}
+
+function parseKgFromText(text) {
+  const cleaned = (text || "").toLowerCase();
+  const qtyWithUnit = cleaned.match(/(\d+(?:\.\d+)?)\s*(kg|kgs|kilogram|kilograms)\b/);
+  if (qtyWithUnit && qtyWithUnit[1]) {
+    return parseFloat(qtyWithUnit[1]);
+  }
+  const plainQty = cleaned.match(/\b(\d+(?:\.\d+)?)\b/);
+  if (plainQty && plainQty[1]) {
+    return parseFloat(plainQty[1]);
+  }
+  return null;
+}
+
+function isLikelyActionText(text) {
+  return /^(Order Tea|Raise Complaint|Know About|Yes, add another tea|No, move to Masala|Yes, add Masala|No, thanks|50g Box \(50 Rupees\)|100g Packet \(100 Rupees\)|Proceed to Payment|Reorder Last|Keep Current Order|Start New Order|Yes, Repeat This Order|No, Start New Order|Use New Address|Use Same Address)$/i.test((text || "").trim());
+}
+
+function getLatestBillTextFromAi() {
+  const aiMessages = chatMain.querySelectorAll('.bg-tea-medium');
+  for (let i = aiMessages.length - 1; i >= 0; i--) {
+    const msgText = aiMessages[i].innerText.replace(/\s+/g, ' ').trim();
+    if (hasTotalKeywords(msgText) || /courier|masala|kg|kashmiri|black gold|green gold/i.test(msgText)) {
+      return msgText;
+    }
+  }
+  return "Tea order";
+}
+
+async function saveOrderToBackend(payload) {
+  const response = await fetch("http://localhost:5000/api/save-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Order save failed";
+    try {
+      const errData = await response.json();
+      if (errData && errData.error) errorMsg = errData.error;
+    } catch (_) {
+      // Keep default message.
+    }
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+async function saveOrderWithFallback(payload) {
+  try {
+    const backendResult = await saveOrderToBackend(payload);
+    const orderId = backendResult?.data?.[0]?.id || null;
+    return { saved: true, orderId };
+  } catch (backendError) {
+    console.error("Backend order save failed, trying direct Supabase REST:", backendError);
+
+    const createRestInsert = (bodyPayload) => fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(bodyPayload)
+    });
+
+    let restResponse = await createRestInsert({ ...payload, status: "Pending" });
+
+    if (!restResponse.ok && payload.customer_phone) {
+      // Retry without customer_phone for older schema.
+      const retryPayload = { ...payload, status: "Pending" };
+      delete retryPayload.customer_phone;
+      restResponse = await createRestInsert(retryPayload);
+    }
+
+    if (!restResponse.ok) {
+      let restError = "Supabase fallback save failed";
+      try {
+        const errorData = await restResponse.json();
+        restError = errorData.message || errorData.error || JSON.stringify(errorData);
+      } catch (_) {
+        // Keep default.
+      }
+      throw new Error(restError);
+    }
+
+    let orderId = null;
+    try {
+      const rowData = await restResponse.json();
+      if (Array.isArray(rowData) && rowData.length > 0) {
+        orderId = rowData[0].id || null;
+      }
+    } catch (_) {
+      // Keep null order id if response parsing fails.
+    }
+
+    return { saved: true, orderId };
+  }
+}
+
+function getSessionId() {
+  let sid = localStorage.getItem("intelliTeaSessionId");
+  if (!sid) {
+    sid = (crypto.randomUUID && crypto.randomUUID()) || ("sid_" + Math.random().toString(16).slice(2));
+    localStorage.setItem("intelliTeaSessionId", sid);
+  }
+  return sid;
+}
 
 function addMessage(text, isAi) {
   const msgDiv = document.createElement('div');
@@ -136,15 +474,16 @@ function parseAmountFromText(text) {
   cleaned = cleaned.replace(/\b\d+(?:\.\d+)?\s*(?:kg|kgs|kilogram|kilograms|g|gram|grams|ltr|liter|litre|ml|pcs|pieces|pack|packs|packet|packets)\b/gi, '');
 
   // Prefer explicit totals with arithmetic expressions, e.g. "total bill is 2000 + 350 = 2350 rupees".
-  const explicitSumMatch = cleaned.match(/(?:total|grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|amount is|total is|final amount|net amount)[^=]{0,80}=\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
+    const explicitSumMatch = cleaned.match(/(?:grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|payable amount|total payable|total is|final amount|net amount)[^=]{0,80}=\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
   if (explicitSumMatch && explicitSumMatch[1]) {
       return String(parseFloat(explicitSumMatch[1]) || 0);
   }
 
   // Prefer explicit total phrases followed by a rupee amount.
-  const explicitTotalMatch = cleaned.match(/(?:total|grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|amount is|total is|final amount|net amount).*?([0-9]+(?:\.[0-9]{1,2})?)\s*(?:rupees|INR|Rs|₹)/i);
-  if (explicitTotalMatch && explicitTotalMatch[1]) {
-      return String(parseFloat(explicitTotalMatch[1]) || 0);
+    const totalMatches = [...cleaned.matchAll(/(?:grand total|final total|amount to pay|amount due|bill amount|total amount|order total|invoice total|total bill|payable amount|total payable|total is|final amount|net amount).*?([0-9]+(?:\.[0-9]{1,2})?)\s*(?:rupees|INR|Rs|₹)/gi)];
+    if (totalMatches.length > 0) {
+      const lastMatch = totalMatches[totalMatches.length - 1];
+      return String(parseFloat(lastMatch[1]) || 0);
   }
 
   // Look for rupee amounts after total keywords.
@@ -169,7 +508,7 @@ function parseAmountFromText(text) {
 
 function hasTotalKeywords(text) {
   const cleaned = text.replace(/,/g, '');
-  return /(?:total amount|amount to pay|amount due|grand total|final total|bill amount|total bill|order total|invoice total|total is|amount is|comes to|comes out to|equals?)/i.test(cleaned);
+  return /(?:total amount|amount to pay|amount due|grand total|final total|bill amount|total bill|order total|invoice total|total is|final amount|net amount|payable amount|total payable|comes to|comes out to|equals?)/i.test(cleaned);
 }
 
 function shouldStoreTotal(text) {
@@ -181,12 +520,175 @@ async function handleSend(buttonText = null) {
   const text = buttonText || chatInput.value.trim();
   if (!text) return;
 
+  if (repeatState.active) {
+      const pickedOrder = findRepeatOrderByButton(text);
+      if (pickedOrder) {
+        repeatState.selectedOrder = pickedOrder;
+        const oldAddress = pickedOrder.address || "No saved address";
+        const amount = parseFloat(pickedOrder.amount || 0);
+        addMessage(`You selected order #${pickedOrder.id || '-'} for Rs ${Number.isFinite(amount) ? amount : 0}. Previous address: ${oldAddress}. Would you like to repeat this order? [Yes, Repeat This Order] [No, Start New Order]`, true);
+        return;
+      }
+
+      if (text === "Yes, Repeat This Order") {
+        if (!repeatState.selectedOrder) {
+          addMessage("Please choose one previous order first.", true);
+          return;
+        }
+
+        const order = repeatState.selectedOrder;
+        const amount = parseFloat(order.amount || 0);
+        if (amount > 10) {
+          localStorage.setItem(ORDER_STORAGE.total, String(amount));
+          localStorage.setItem(ORDER_STORAGE.finalTotal, String(amount));
+        }
+        if (order.items) {
+          localStorage.setItem(ORDER_STORAGE.pendingItems, String(order.items));
+        }
+        if (order.address) {
+          localStorage.setItem(ORDER_STORAGE.pendingAddress, String(order.address));
+          orderDraft.address = String(order.address);
+        }
+
+        addMessage(`Great! We found your previous address: ${orderDraft.address || 'No saved address'}. How would you like to continue? [Use Same Address] [Use New Address]`, true);
+        return;
+      }
+
+      if (text === "Use Same Address") {
+        if (!orderDraft.address) {
+          addMessage("No previous address found. Please type your new address.", true);
+          repeatState.awaitingNewAddress = true;
+          orderDraft.expectingAddress = true;
+          return;
+        }
+        addMessage("Perfect. Continuing with your saved address. [Proceed to Payment]", true);
+        return;
+      }
+
+      if (text === "Use New Address") {
+        repeatState.awaitingNewAddress = true;
+        orderDraft.expectingAddress = true;
+        addMessage("Please type your new delivery address with pincode.", true);
+        return;
+      }
+
+      if (text === "Start New Order" || text === "No, Start New Order" || text === "Keep Current Order") {
+        repeatState.active = false;
+        repeatState.awaitingNewAddress = false;
+        repeatState.selectedOrder = null;
+        localStorage.removeItem(ORDER_STORAGE.repeatPromptShown);
+        localStorage.removeItem(ORDER_STORAGE.repeatOrderData);
+        addMessage("No problem, starting a fresh order.", true);
+        await handleSend("Order Tea");
+        return;
+      }
+  }
+
+  if (text === "Reorder Last") {
+      const raw = localStorage.getItem(ORDER_STORAGE.repeatOrderData);
+      if (!raw) {
+        addMessage("I could not find your previous order details. Please continue with your current order.", true);
+        return;
+      }
+
+      try {
+        const order = JSON.parse(raw);
+        const amount = parseFloat(order.amount || 0);
+        if (amount > 10) {
+          localStorage.setItem(ORDER_STORAGE.total, String(amount));
+          localStorage.setItem(ORDER_STORAGE.finalTotal, String(amount));
+        }
+        if (order.items) {
+          localStorage.setItem(ORDER_STORAGE.pendingItems, String(order.items));
+        }
+        if (order.address) {
+          localStorage.setItem(ORDER_STORAGE.pendingAddress, String(order.address));
+          orderDraft.address = String(order.address);
+          const phone = extractPhoneFromText(order.address);
+          if (phone) localStorage.setItem(ORDER_STORAGE.customerPhone, phone);
+        }
+
+        addMessage("Previous order loaded. You can now continue to payment or adjust details.", true);
+      } catch (_) {
+        addMessage("Could not load previous order. Please continue with current order.", true);
+      }
+      return;
+  }
+
+  if (text === "Keep Current Order") {
+      addMessage("Great, we will continue with your current order.", true);
+      return;
+  }
+
+  if (text === "Order Tea") {
+      resetOrderState();
+  }
+
+    if (TEA_PRICES[text]) {
+      orderDraft.pendingTea = text;
+    }
+
+    if (text === "50g Box (50 Rupees)") {
+      orderDraft.masala = 50;
+    }
+
+    if (text === "100g Packet (100 Rupees)") {
+      orderDraft.masala = 100;
+    }
+
+    if (text === "No, thanks") {
+      orderDraft.masala = 0;
+    }
+
+    if (!buttonText && orderDraft.pendingTea) {
+      const qty = parseKgFromText(text);
+      if (qty && qty > 0) {
+        orderDraft.items.push({
+          name: orderDraft.pendingTea,
+          qty,
+          pricePerKg: TEA_PRICES[orderDraft.pendingTea]
+        });
+        orderDraft.pendingTea = null;
+      }
+    }
+
+  if (!buttonText && !isLikelyActionText(text)) {
+      if (orderDraft.expectingAddress) {
+        const addressCheck = validateAddressText(text);
+        if (!addressCheck.valid) {
+          addMessage(addressCheck.message, true);
+          return;
+        }
+        orderDraft.address = text;
+        const phone = extractPhoneFromText(text);
+        if (phone) {
+          localStorage.setItem(ORDER_STORAGE.customerPhone, phone);
+        }
+
+        if (repeatState.active && repeatState.awaitingNewAddress) {
+          repeatState.awaitingNewAddress = false;
+          orderDraft.expectingAddress = false;
+          localStorage.setItem(ORDER_STORAGE.pendingAddress, text);
+          addMessage("Address updated successfully. [Proceed to Payment]", true);
+          return;
+        }
+      }
+      localStorage.setItem(ORDER_STORAGE.pendingAddress, text);
+  }
+
 // --- REDIRECTION INTERCEPTOR ---
   if (text === "Proceed to Payment") {
       const aiMessages = chatMain.querySelectorAll('.bg-tea-medium');
-      let finalAmount = "0";
+      const finalStoredAmount = localStorage.getItem(ORDER_STORAGE.finalTotal);
+      const storedAmount = localStorage.getItem(ORDER_STORAGE.total);
+      const draftTotal = getOrderDraftTotal();
+      let finalAmount = draftTotal > 0
+        ? String(draftTotal)
+        : ((finalStoredAmount && parseFloat(finalStoredAmount) > 10)
+        ? finalStoredAmount
+        : ((storedAmount && parseFloat(storedAmount) > 10) ? storedAmount : "0"));
 
-      if (aiMessages.length > 0) {
+      if (finalAmount === "0" && aiMessages.length > 0) {
               // Search backwards through AI messages to find the bill/total message.
               // We may still need to parse the same message that has "Order saved!".
               for (let i = aiMessages.length - 1; i >= 0; i--) {
@@ -202,7 +704,7 @@ async function handleSend(buttonText = null) {
       }
 
       // If still 0, try one more time with all messages and be more aggressive
-      if (finalAmount === "0") {
+        if (finalAmount === "0") {
           for (let i = aiMessages.length - 1; i >= 0; i--) {
               const msgText = aiMessages[i].innerText;
               // Look for any number > 50 (likely a total, not a quantity)
@@ -218,19 +720,45 @@ async function handleSend(buttonText = null) {
           }
       }
 
-      const storedAmount = localStorage.getItem("intelliTeaTotal");
-      if ((finalAmount === "0" || !finalAmount) && storedAmount && parseFloat(storedAmount) > 10) {
+        if ((finalAmount === "0" || !finalAmount) && storedAmount && parseFloat(storedAmount) > 10) {
           finalAmount = storedAmount;
       }
 
       if (!finalAmount || parseFloat(finalAmount) <= 10) {
-          localStorage.removeItem("intelliTeaTotal");
+          localStorage.removeItem(ORDER_STORAGE.total);
+          localStorage.removeItem(ORDER_STORAGE.finalTotal);
           addMessage("I could not detect a valid total amount from the chat bill. Please review the AI response or ask the AI to re-send the final total.", true);
           return;
       }
 
       console.log(`Final amount to store: ${finalAmount}`); // Debug log
-      localStorage.setItem("intelliTeaTotal", finalAmount);
+        localStorage.setItem(ORDER_STORAGE.total, finalAmount);
+        localStorage.setItem(ORDER_STORAGE.finalTotal, finalAmount);
+
+        // Retry save right before payment in case earlier save failed or was skipped.
+        const alreadySaved = localStorage.getItem(ORDER_STORAGE.orderSaved) === "1";
+        if (!alreadySaved) {
+          const pendingAddress = orderDraft.address || localStorage.getItem(ORDER_STORAGE.pendingAddress) || "Not provided";
+          const pendingItems = localStorage.getItem(ORDER_STORAGE.pendingItems) || buildDraftItemsSummary() || getLatestBillTextFromAi();
+          const customerPhone = localStorage.getItem(ORDER_STORAGE.customerPhone) || extractPhoneFromText(pendingAddress);
+          if (parseFloat(finalAmount) > 10) {
+            try {
+              const saveResult = await saveOrderWithFallback({
+                items: pendingItems,
+                amount: parseFloat(finalAmount),
+                  address: pendingAddress,
+                  customer_phone: customerPhone || null
+              });
+              localStorage.setItem(ORDER_STORAGE.orderSaved, "1");
+              localStorage.setItem(ORDER_STORAGE.paymentStatus, "pending");
+              if (saveResult && saveResult.orderId) {
+                localStorage.setItem(ORDER_STORAGE.orderId, String(saveResult.orderId));
+              }
+            } catch (saveError) {
+              console.error("Order save retry failed:", saveError);
+            }
+          }
+        }
 
       addMessage(`Final Total: ₹${finalAmount}. Opening payment...`, true);
 
@@ -278,8 +806,52 @@ async function handleSend(buttonText = null) {
         addMessage(data.reply, true);
         const parsedAmount = parseAmountFromText(data.reply);
         if (parsedAmount && parseFloat(parsedAmount) > 10 && hasTotalKeywords(data.reply)) {
-            localStorage.setItem("intelliTeaTotal", parsedAmount);
+            localStorage.setItem(ORDER_STORAGE.total, parsedAmount);
         }
+
+        if (/how many kilograms/i.test(data.reply) && orderDraft.pendingTea) {
+          // Quantity requested for selected tea; next free-text number will be treated as kg.
+        }
+
+        if (/delivery address/i.test(data.reply) && parsedAmount && parseFloat(parsedAmount) > 10) {
+            // This prompt is the final bill stage in your flow.
+          const draftTotal = getOrderDraftTotal();
+          const finalLocked = draftTotal > 0 ? String(draftTotal) : parsedAmount;
+          localStorage.setItem(ORDER_STORAGE.finalTotal, finalLocked);
+          localStorage.setItem(ORDER_STORAGE.pendingItems, buildDraftItemsSummary());
+          orderDraft.expectingAddress = true;
+        }
+
+      // When AI confirms order saved, persist the order in Supabase via backend.
+      if (data.reply && /order\s*saved/i.test(data.reply)) {
+        const draftTotal = getOrderDraftTotal();
+        const preferredAmount = draftTotal > 0
+          ? String(draftTotal)
+          : (localStorage.getItem(ORDER_STORAGE.finalTotal) || localStorage.getItem(ORDER_STORAGE.total) || parsedAmount || "0");
+        const orderItems = localStorage.getItem(ORDER_STORAGE.pendingItems) || buildDraftItemsSummary() || getLatestBillTextFromAi();
+        const orderAddress = orderDraft.address || localStorage.getItem(ORDER_STORAGE.pendingAddress) || text || "Not provided";
+        const customerPhone = localStorage.getItem(ORDER_STORAGE.customerPhone) || extractPhoneFromText(orderAddress);
+
+        if (parseFloat(preferredAmount) > 10) {
+          try {
+            const saveResult = await saveOrderWithFallback({
+              items: orderItems,
+              amount: parseFloat(preferredAmount),
+              address: orderAddress,
+              customer_phone: customerPhone || null
+            });
+            localStorage.setItem(ORDER_STORAGE.orderSaved, "1");
+            localStorage.setItem(ORDER_STORAGE.paymentStatus, "pending");
+            if (saveResult && saveResult.orderId) {
+              localStorage.setItem(ORDER_STORAGE.orderId, String(saveResult.orderId));
+            }
+            orderDraft.expectingAddress = false;
+          } catch (saveError) {
+            console.error("Order save failed:", saveError);
+            addMessage("Order save is pending due to a server/database issue. You can still pay, and we will retry saving from payment step.", true);
+          }
+        }
+      }
     } else {
         addMessage("Oops! Server error: " + data.error, true);
     }
@@ -297,11 +869,20 @@ chatInput.addEventListener('keypress', (e) => {
 
 // Initial greeting to trigger the AI
 window.addEventListener('load', () => {
+  seedCustomerPhoneFromEntry();
+
+  // Prevent stale totals/orders from previous completed sessions.
+  resetOrderState();
+
+  chatMain.innerHTML = '<div class="flex justify-center"><span class="text-[11px] font-bold text-tea-medium/60 uppercase tracking-widest bg-primary/5 px-3 py-1 rounded-full">Today</span></div>';
+
   // Silently trigger the backend so it gives us the first buttons immediately
   setTimeout(() => {
-     handleSend("Hello");
-     // We temporarily remove the default fake message so the real AI takes over
-     chatMain.innerHTML = '<div class="flex justify-center"><span class="text-[11px] font-bold text-tea-medium/60 uppercase tracking-widest bg-primary/5 px-3 py-1 rounded-full">Today</span></div>';
+     startRepeatCustomerPrompt().then((didShowRepeat) => {
+      if (!didShowRepeat) {
+        handleSend("Hello");
+      }
+     });
   }, 500);
 });
 </script>

@@ -5,6 +5,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>IntelliTea - Payment</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -85,6 +86,15 @@
     </a>
 </div>
 </section>
+<section class="bg-white dark:bg-slate-900 rounded-2xl border border-primary/20 p-4 space-y-3">
+<p class="text-xs font-bold uppercase tracking-wider text-slate-500">After Payment</p>
+<p id="payment-status-msg" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Payment status: Pending confirmation</p>
+<div class="flex gap-2">
+<input id="utr-input" type="text" placeholder="Enter UTR/Ref No." class="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40" />
+<button id="submit-utr-btn" class="rounded-xl bg-primary text-white px-4 py-2 text-sm font-bold hover:bg-brand-dark transition-colors">Submit</button>
+</div>
+<p class="text-[11px] text-slate-500">Enter the payment reference shown by your UPI app so admin can verify quickly.</p>
+</section>
 <p class="text-center text-[10px] text-slate-400 mt-8">
 <span class="material-symbols-outlined align-middle text-xs">verified_user</span>
   100% Safe &amp; Secure Payments powered by IntelliTea
@@ -94,15 +104,203 @@
 </body>
 
 <script>
+const ORDER_STORAGE = {
+  total: "intelliTeaTotal",
+  finalTotal: "intelliTeaFinalTotal",
+  pendingItems: "intelliTeaPendingItems",
+  pendingAddress: "intelliTeaPendingAddress",
+  orderSaved: "intelliTeaOrderSaved",
+  orderId: "intelliTeaOrderId",
+  paymentStatus: "intelliTeaPaymentStatus",
+  utrNo: "intelliTeaUtrNo",
+  customerPhone: "intelliTeaCustomerPhone"
+};
+
+const SUPABASE_URL = "https://tmxxjzqzukphngjfkizs.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
+
+function extractPhoneFromText(text) {
+  const normalized = (text || "").replace(/[^0-9+]/g, "");
+  const direct = normalized.match(/(?:\+?91)?([6-9]\d{9})/);
+  return direct && direct[1] ? direct[1] : null;
+}
+
+async function saveOrderToBackend(payload) {
+  const response = await fetch("http://localhost:5000/api/save-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Order save failed";
+    try {
+      const errData = await response.json();
+      if (errData && errData.error) errorMsg = errData.error;
+    } catch (_) {
+      // Keep default message.
+    }
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
+}
+
+async function saveOrderWithFallback(payload) {
+  try {
+    const backendResult = await saveOrderToBackend(payload);
+    const orderId = backendResult?.data?.[0]?.id || null;
+    return { saved: true, orderId };
+  } catch (backendError) {
+    console.error("Backend order save failed on payment page, trying Supabase REST:", backendError);
+
+    const createRestInsert = (bodyPayload) => fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(bodyPayload)
+    });
+
+    let restResponse = await createRestInsert({ ...payload, status: "Pending" });
+
+    if (!restResponse.ok && payload.customer_phone) {
+      const retryPayload = { ...payload, status: "Pending" };
+      delete retryPayload.customer_phone;
+      restResponse = await createRestInsert(retryPayload);
+    }
+
+    if (!restResponse.ok) {
+      let restError = "Supabase fallback save failed";
+      try {
+        const errorData = await restResponse.json();
+        restError = errorData.message || errorData.error || JSON.stringify(errorData);
+      } catch (_) {
+        // Keep default.
+      }
+      throw new Error(restError);
+    }
+
+    let orderId = null;
+    try {
+      const rowData = await restResponse.json();
+      if (Array.isArray(rowData) && rowData.length > 0) {
+        orderId = rowData[0].id || null;
+      }
+    } catch (_) {
+      // Keep null order id if response parsing fails.
+    }
+
+    return { saved: true, orderId };
+  }
+}
+
+function setPaymentStatusMessage(text, type = "pending") {
+  const el = document.getElementById("payment-status-msg");
+  if (!el) return;
+  el.innerText = text;
+  el.className = "text-xs rounded-lg px-3 py-2 border";
+  if (type === "paid") {
+    el.classList.add("text-emerald-700", "bg-emerald-50", "border-emerald-200");
+  } else if (type === "error") {
+    el.classList.add("text-red-700", "bg-red-50", "border-red-200");
+  } else {
+    el.classList.add("text-amber-700", "bg-amber-50", "border-amber-200");
+  }
+}
+
+async function markOrderPaid(orderId, utrNo) {
+  const payloadWithPayment = {
+    status: "Paid",
+    payment_status: "paid",
+    utr_no: utrNo,
+    payment_verified: true
+  };
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify(payloadWithPayment)
+  });
+
+  if (response.ok) {
+    return true;
+  }
+
+  // Fallback for schemas without payment-specific columns.
+  const fallbackResponse = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    },
+    body: JSON.stringify({ status: "Paid" })
+  });
+
+  if (!fallbackResponse.ok) {
+    let errText = "Failed to mark payment as paid";
+    try {
+      const errData = await fallbackResponse.json();
+      errText = errData.message || errData.error || JSON.stringify(errData);
+    } catch (_) {
+      // Keep fallback text.
+    }
+    throw new Error(errText);
+  }
+
+  return true;
+}
+
     // 1. Get the dynamic amount from the chat page
-const storedAmount = localStorage.getItem("intelliTeaTotal");
+const storedAmount = localStorage.getItem(ORDER_STORAGE.finalTotal) || localStorage.getItem(ORDER_STORAGE.total);
 console.log("Amount received from Chat:", storedAmount);
 if (!storedAmount || storedAmount === "0" || parseFloat(storedAmount) <= 10) {
-        localStorage.removeItem("intelliTeaTotal");
+        localStorage.removeItem(ORDER_STORAGE.total);
+        localStorage.removeItem(ORDER_STORAGE.finalTotal);
         document.getElementById("total-amount").innerText = "₹0";
         alert("Wait! No valid amount was detected. Please go back to the chat and complete the order again.");
     } else {
         document.getElementById("total-amount").innerText = "₹" + storedAmount;
+
+        const alreadySaved = localStorage.getItem(ORDER_STORAGE.orderSaved) === "1";
+        if (!alreadySaved) {
+          const pendingItems = localStorage.getItem(ORDER_STORAGE.pendingItems) || "Tea order";
+          const pendingAddress = localStorage.getItem(ORDER_STORAGE.pendingAddress) || "Not provided";
+          const customerPhone = localStorage.getItem(ORDER_STORAGE.customerPhone) || extractPhoneFromText(pendingAddress);
+          saveOrderWithFallback({
+            items: pendingItems,
+            amount: parseFloat(storedAmount),
+            address: pendingAddress,
+            customer_phone: customerPhone || null
+          })
+            .then((result) => {
+              localStorage.setItem(ORDER_STORAGE.orderSaved, "1");
+              localStorage.setItem(ORDER_STORAGE.paymentStatus, "pending");
+              if (result && result.orderId) {
+                localStorage.setItem(ORDER_STORAGE.orderId, String(result.orderId));
+              }
+            })
+            .catch((error) => {
+              console.error("Payment page order save retry failed:", error);
+            });
+        }
+
+        const existingStatus = localStorage.getItem(ORDER_STORAGE.paymentStatus);
+        if (existingStatus === "paid") {
+          setPaymentStatusMessage("Payment status: Paid and shared with admin", "paid");
+        } else {
+          setPaymentStatusMessage("Payment status: Pending confirmation", "pending");
+        }
     }
     // document.getElementById("total-amount").innerText = "₹" + storedAmount;
 
@@ -123,6 +321,39 @@ document.getElementById("qr-image").src = qrUrl;
 // 5. Setup WhatsApp Message
 const waMsg = `Hello! I just paid ₹${storedAmount} for my tea order. Here is the screenshot.`;
 document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waMsg)}`;
+
+window.addEventListener("load", () => {
+  alert("After completing payment, please share your payment screenshot with admin using the WhatsApp link below or on 9464364880.");
+});
+
+document.getElementById("submit-utr-btn").addEventListener("click", async () => {
+  const utrInput = document.getElementById("utr-input");
+  const utrNo = (utrInput.value || "").trim();
+  const orderId = localStorage.getItem(ORDER_STORAGE.orderId);
+
+  if (!utrNo || !/^[A-Za-z0-9\-]{8,30}$/.test(utrNo)) {
+    setPaymentStatusMessage("Please enter a valid UTR/Ref No. (8-30 letters/numbers).", "error");
+    return;
+  }
+
+  if (!orderId) {
+    setPaymentStatusMessage("Order ID not found. Please go back to chat and re-open payment.", "error");
+    return;
+  }
+
+  try {
+    await markOrderPaid(orderId, utrNo);
+    localStorage.setItem(ORDER_STORAGE.paymentStatus, "paid");
+    localStorage.setItem(ORDER_STORAGE.utrNo, utrNo);
+    setPaymentStatusMessage(`Payment status: Paid (UTR ${utrNo}) shared with admin`, "paid");
+
+    const paidWaMsg = `Hello! I paid ₹${storedAmount} for Order #${orderId}. UTR/Ref: ${utrNo}. Sharing screenshot now.`;
+    document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(paidWaMsg)}`;
+  } catch (error) {
+    console.error("Failed to mark payment paid:", error);
+    setPaymentStatusMessage(`Could not update payment status: ${error.message}`, "error");
+  }
+});
 
 const handlePayment = () => {
   if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {

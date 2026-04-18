@@ -120,11 +120,13 @@
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Customer</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Address</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Status</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Payment</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase">UTR</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody" class="divide-y divide-slate-100">
-                            <tr><td colspan="5" class="p-10 text-center text-slate-400">Loading orders...</td></tr>
+                            <tr><td colspan="7" class="p-10 text-center text-slate-400">Loading orders...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -132,7 +134,7 @@
         </main>
     </div>
 
-    <div id="orderModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div id="orderModal" class="hidden fixed inset-0 z-[100] items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
         <div class="p-6 border-b border-primary/10 flex justify-between items-center">
             <h3 class="text-xl font-bold text-primary">Order Details</h3>
@@ -154,6 +156,12 @@
         const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
+        function extractPhone(text) {
+            const normalized = String(text || '').replace(/[^0-9+]/g, '');
+            const match = normalized.match(/(?:\+?91)?([6-9]\d{9})/);
+            return match && match[1] ? match[1] : null;
+        }
+
         async function fetchOrders() {
             console.log("Fetching real data...");
             const { data: orders, error } = await _supabase
@@ -170,14 +178,29 @@
             tableBody.innerHTML = ''; 
 
             if (orders.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center">No orders found in database.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="7" class="p-10 text-center">No orders found in database.</td></tr>';
             }
 
+           const phoneCounts = {};
            orders.forEach(order => {
+               const phone = order.customer_phone || extractPhone(order.address);
+               if (phone) {
+                   phoneCounts[phone] = (phoneCounts[phone] || 0) + 1;
+               }
+           });
+
+           orders.forEach(order => {
+    const paymentStatus = (order.payment_status || (String(order.status || '').toLowerCase() === 'paid' ? 'paid' : 'pending')).toLowerCase();
+    const utrNo = order.utr_no || '-';
+    const phone = order.customer_phone || extractPhone(order.address);
+    const isRepeat = phone && phoneCounts[phone] > 1;
+    const customerBadge = isRepeat
+        ? '<span class="inline-block ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-700">Repeat</span>'
+        : '<span class="inline-block ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-600">New</span>';
     const row = `
         <tr class="hover:bg-primary/5 transition-colors border-b border-primary/5">
             <td class="px-6 py-4 whitespace-nowrap font-bold text-primary">#${order.id}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">${order.items || 'Tea Order'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">${order.items || 'Tea Order'} ${customerBadge}</td>
             <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">${order.address || 'No Address Provided'}</td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase 
@@ -185,7 +208,19 @@
                     ${order.status}
                 </span>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                    ${paymentStatus}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-600">${utrNo}</td>
             <td class="px-6 py-4 text-right flex justify-end items-center gap-3">
+                ${paymentStatus !== 'paid' ? `
+                    <button onclick="markOrderPaid(${order.id})" 
+                            class="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full hover:bg-emerald-700 transition-all">
+                        MARK PAID
+                    </button>
+                ` : ''}
                 ${order.status !== 'delivered' ? `
                     <button onclick="updateOrderStatus(${order.id}, 'delivered')" 
                             class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full hover:bg-primary/90 transition-all">
@@ -215,6 +250,40 @@
         }
 
         fetchOrders();
+
+        async function markOrderPaid(orderId) {
+    const utrNo = prompt(`Enter UTR/Ref number for Order #${orderId} (optional but recommended):`, "");
+    if (utrNo === null) return;
+
+    const payload = {
+        status: 'Paid',
+        payment_status: 'paid',
+        utr_no: utrNo.trim() || null,
+        payment_verified: true
+    };
+
+    let { error } = await _supabase
+        .from('orders')
+        .update(payload)
+        .eq('id', orderId);
+
+    // Fallback for schemas where payment-specific columns are not added yet.
+    if (error) {
+        const fallback = await _supabase
+            .from('orders')
+            .update({ status: 'Paid' })
+            .eq('id', orderId);
+        error = fallback.error;
+    }
+
+    if (error) {
+        alert("Error marking payment as paid: " + error.message);
+        return;
+    }
+
+    alert("Order #" + orderId + " marked as paid.");
+    fetchOrders();
+}
 
         async function updateOrderStatus(orderId, newStatus) {
     const confirmation = confirm(`Are you sure you want to mark Order #${orderId} as ${newStatus}?`);
@@ -258,6 +327,9 @@ function viewOrder(order) {
         <div class="grid grid-cols-2 gap-4">
             <div><p class="text-xs text-slate-400 uppercase font-bold">Order ID</p><p class="font-semibold">#${order.id}</p></div>
             <div><p class="text-xs text-slate-400 uppercase font-bold">Status</p><p class="font-semibold uppercase text-primary">${order.status}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Payment</p><p class="font-semibold uppercase text-primary">${order.payment_status || (String(order.status || '').toLowerCase() === 'paid' ? 'paid' : 'pending')}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">UTR/Ref</p><p class="font-semibold">${order.utr_no || '-'}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Phone</p><p class="font-semibold">${order.customer_phone || extractPhone(order.address) || '-'}</p></div>
             <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Items Ordered</p><p class="font-semibold">${order.items}</p></div>
             <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Delivery Address</p><p class="text-sm">${order.address}</p></div>
             <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Order Date</p><p class="text-sm">${new Date(order.created_at).toLocaleString()}</p></div>
@@ -265,10 +337,13 @@ function viewOrder(order) {
     `;
     
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 function closeModal() {
-    document.getElementById('orderModal').classList.add('hidden');
+    const modal = document.getElementById('orderModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
 }
     </script>
 </body>

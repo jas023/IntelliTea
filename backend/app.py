@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -5,11 +6,16 @@ from dotenv import load_dotenv
 from groq import Groq
 from supabase import create_client, Client
 
+# Load env explicitly from backend folder first, then fallback to default search.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"), override=True)
 load_dotenv(override=True)
 
 # --- SUPABASE CONNECTION ---
 SUPABASE_URL = os.getenv("SUPABASE_URL") 
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") 
+# Prefer service role key on backend to bypass RLS for inserts.
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+supabase = None
 
 # --- Initialize the app ---
 app = Flask(__name__)
@@ -17,7 +23,7 @@ CORS(app)
 
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: Supabase credentials missing in .env file!")
+    print("Error: Supabase credentials missing in .env file! Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY).")
 else:
     try:
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -152,13 +158,38 @@ def create_order():
 def save_order():
     data = request.json
     try:
-        # This sends data to your 'orders' table in Supabase
-        response = supabase.table("orders").insert({
+        if supabase is None:
+            return jsonify({
+                "error": "Supabase is not configured on backend. Ensure backend/.env has SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY), then restart backend server."
+            }), 500
+
+        amount = data.get("amount", 0)
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            amount = 0.0
+
+        order_payload = {
             "items": data.get("items"),
-            "amount": float(data.get("amount")),
+            "amount": amount,
             "address": data.get("address", "Not provided"),
             "status": "Pending" # Default status for new orders
-        }).execute()
+        }
+
+        customer_phone = data.get("customer_phone")
+        if customer_phone:
+            order_payload["customer_phone"] = str(customer_phone)
+
+        # Try insert with customer_phone when available; fallback for older schema.
+        try:
+            response = supabase.table("orders").insert(order_payload).execute()
+        except Exception as insert_error:
+            if "customer_phone" in order_payload and ("customer_phone" in str(insert_error) or "column" in str(insert_error).lower()):
+                order_payload.pop("customer_phone", None)
+                response = supabase.table("orders").insert(order_payload).execute()
+            else:
+                raise
+
         return jsonify({"status": "success", "data": response.data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
