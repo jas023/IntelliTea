@@ -98,26 +98,22 @@
                     <p class="text-slate-500">Here is a real-time overview of IntelliTea.</p>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
-                        <!-- <div class="w-12 h-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                            <span class="material-symbols-outlined">shopping_cart</span>
-                        </div> -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
         <p class="text-slate-500 text-sm font-medium">Total Orders</p>
         <h4 id="realTotalOrders" class="text-2xl font-bold mt-1">0</h4>
     </div>
 
-                    <!-- <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
-                        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
-                            <span class="material-symbols-outlined">group</span>
-                        </div>
+                    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
+                        <p class="text-slate-500 text-sm font-medium">Total Earnings</p>
+                        <h4 id="totalEarnings" class="text-2xl font-bold mt-1">Rs 0</h4>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
                         <p class="text-slate-500 text-sm font-medium">Admin Staff</p>
-                        <h4 id="adminCount" class="text-2xl font-bold mt-1">...</h4>
+                        <h4 id="adminCount" class="text-2xl font-bold mt-1">0</h4>
                     </div>
                 </div>
-            </div> -->
         </main>
     </div>
 
@@ -137,7 +133,25 @@
                 document.getElementById('realTotalOrders').innerText = orderCount || 0;
             }
 
-            // 2. Fetch Admin Count (from your whitelist table)
+            // 2. Fetch order values for earnings calculations
+            const { data: orders, error: earningsError } = await _supabase
+                .from('orders')
+                .select('amount');
+
+            if (!earningsError && Array.isArray(orders)) {
+                let total = 0;
+
+                orders.forEach(order => {
+                    const amount = Number(order.amount) || 0;
+                    total += amount;
+                });
+
+                const formatRs = (value) => `Rs ${Math.round(value).toLocaleString('en-IN')}`;
+
+                document.getElementById('totalEarnings').innerText = formatRs(total);
+            }
+
+            // 3. Fetch Admin Count (from whitelist table)
             const { count: staffCount, error: staffError } = await _supabase
                 .from('authorized_admins')
                 .select('*', { count: 'exact', head: true });
