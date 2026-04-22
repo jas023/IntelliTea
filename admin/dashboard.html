@@ -98,7 +98,7 @@
                     <p class="text-slate-500">Here is a real-time overview of IntelliTea.</p>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
         <p class="text-slate-500 text-sm font-medium">Total Orders</p>
         <h4 id="realTotalOrders" class="text-2xl font-bold mt-1">0</h4>
@@ -113,6 +113,30 @@
                         <p class="text-slate-500 text-sm font-medium">Admin Staff</p>
                         <h4 id="adminCount" class="text-2xl font-bold mt-1">0</h4>
                     </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
+                        <p class="text-slate-500 text-sm font-medium">Total Complaints</p>
+                        <h4 id="complaintsCount" class="text-2xl font-bold mt-1">0</h4>
+                    </div>
+                </div>
+
+                <div class="bg-white mt-6 rounded-xl border border-primary/5 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-primary/10">
+                        <h4 class="text-base font-bold text-slate-800">Recent Complaints</h4>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50">
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">ID</th>
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Issue</th>
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Details</th>
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentComplaintsBody"></tbody>
+                        </table>
+                    </div>
                 </div>
         </main>
     </div>
@@ -122,6 +146,35 @@
         const supabaseUrl = "https://tmxxjzqzukphngjfkizs.supabase.co";
         const supabaseKey = "sb_publishable_Ei2gtLGHF03W6GQKnblF6Q_fIogWqdy";
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        function formatCreatedAt(value) {
+            if (!value) return '-';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '-';
+            return date.toLocaleString('en-IN');
+        }
+
+        function renderComplaints(rows) {
+            const tableBody = document.getElementById('recentComplaintsBody');
+            if (!tableBody) return;
+
+            if (!Array.isArray(rows) || rows.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-sm text-slate-500">No complaints found.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            rows.forEach(row => {
+                tableBody.innerHTML += `
+                    <tr class="border-b border-primary/5 hover:bg-primary/5">
+                        <td class="px-5 py-3 text-sm font-semibold text-primary">#${row.id || '-'}</td>
+                        <td class="px-5 py-3 text-sm text-slate-700">${row.issue || '-'}</td>
+                        <td class="px-5 py-3 text-sm text-slate-700">${row.details || '-'}</td>
+                        <td class="px-5 py-3 text-sm text-slate-500">${formatCreatedAt(row.created_at)}</td>
+                    </tr>
+                `;
+            });
+        }
 
         async function loadDashboardData() {
             // 1. Fetch Total Orders
@@ -158,6 +211,35 @@
             
             if (!staffError) {
                 document.getElementById('adminCount').innerText = staffCount || 0;
+            }
+
+            // 4. Fetch complaints from backend (server credentials) to avoid browser RLS restrictions.
+            try {
+                const response = await fetch('http://localhost:5000/api/complaints?limit=8');
+                const payload = await response.json();
+
+                if (!response.ok || !payload || payload.error) {
+                    throw new Error((payload && payload.error) || 'Complaint API failed');
+                }
+
+                document.getElementById('complaintsCount').innerText = payload.count || 0;
+                renderComplaints(Array.isArray(payload.data) ? payload.data : []);
+            } catch (complaintApiError) {
+                console.error('Backend complaint fetch failed, falling back to direct query:', complaintApiError);
+
+                let { data: complaints, count: complaintCount, error: complaintError } = await _supabase
+                    .from('complaints')
+                    .select('id,issue,details,created_at', { count: 'exact' })
+                    .order('created_at', { ascending: false })
+                    .limit(8);
+
+                if (complaintError) {
+                    document.getElementById('complaintsCount').innerText = '0';
+                    renderComplaints([]);
+                } else {
+                    document.getElementById('complaintsCount').innerText = complaintCount || 0;
+                    renderComplaints(complaints || []);
+                }
             }
         }
 

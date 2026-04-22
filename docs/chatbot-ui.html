@@ -127,6 +127,12 @@ const repeatState = {
   awaitingNewAddress: false
 };
 
+const complaintState = {
+  awaitingDetails: false
+};
+
+const ADMIN_CONTACT_NUMBER = "9464364880";
+
 function resetOrderState() {
   localStorage.removeItem(ORDER_STORAGE.total);
   localStorage.removeItem(ORDER_STORAGE.finalTotal);
@@ -322,7 +328,7 @@ function parseKgFromText(text) {
 }
 
 function isLikelyActionText(text) {
-  return /^(Order Tea|Raise Complaint|Know About|Yes, add another tea|No, move to Masala|Yes, add Masala|No, thanks|50g Box \(50 Rupees\)|100g Packet \(100 Rupees\)|Proceed to Payment|Reorder Last|Keep Current Order|Start New Order|Yes, Repeat This Order|No, Start New Order|Use New Address|Use Same Address)$/i.test((text || "").trim());
+  return /^(Order Tea|Raise Complaint|Order Not Received|Quality Issue|Other Complaint|Know About|Yes, add another tea|No, move to Masala|Yes, add Masala|No, thanks|50g Box \(50 Rupees\)|100g Packet \(100 Rupees\)|Proceed to Payment|Reorder Last|Keep Current Order|Start New Order|Yes, Repeat This Order|No, Start New Order|Use New Address|Use Same Address)$/i.test((text || "").trim());
 }
 
 function getLatestBillTextFromAi() {
@@ -408,6 +414,32 @@ async function saveOrderWithFallback(payload) {
 
     return { saved: true, orderId };
   }
+}
+
+async function saveComplaintToBackend(issue, details) {
+  const response = await fetch("http://localhost:5000/api/save-complaint", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ issue, details })
+  });
+
+  if (!response.ok) {
+    let errorMsg = "Complaint save failed";
+    try {
+      const errData = await response.json();
+      if (errData && errData.error) {
+        errorMsg = errData.error;
+        if (errData.details) {
+          errorMsg += ` | Details: ${errData.details}`;
+        }
+      }
+    } catch (_) {
+      // Keep default message.
+    }
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
 }
 
 function getSessionId() {
@@ -519,6 +551,60 @@ function shouldStoreTotal(text) {
 async function handleSend(buttonText = null) {
   const text = buttonText || chatInput.value.trim();
   if (!text) return;
+
+  if (text === "Raise Complaint") {
+    addMessage("Please select your complaint type. [Order Not Received] [Quality Issue] [Other Complaint]", true);
+    return;
+  }
+
+  if (text === "Order Not Received") {
+    try {
+      await saveComplaintToBackend("order not received", "Order not received (selected from chatbot quick option)");
+      addMessage(`Please call admin on ${ADMIN_CONTACT_NUMBER} for immediate help. Your complaint is registered.`, true);
+    } catch (error) {
+      console.error("Complaint save failed:", error);
+      addMessage(`Please call admin on ${ADMIN_CONTACT_NUMBER} for immediate help. We could not register this complaint right now.`, true);
+    }
+    return;
+  }
+
+  if (text === "Quality Issue") {
+    try {
+      await saveComplaintToBackend("order quality", "Quality issue selected from chatbot quick option");
+      addMessage("Sorry for the inconvenience. We will improve and replace it in your next order. Your complaint is registered.", true);
+    } catch (error) {
+      console.error("Complaint save failed:", error);
+      addMessage(`Sorry for the inconvenience. We could not register your quality complaint right now. Please call admin on ${ADMIN_CONTACT_NUMBER}.`, true);
+    }
+    return;
+  }
+
+  if (text === "Other Complaint") {
+    complaintState.awaitingDetails = true;
+    addMessage("Please type your complaint in detail. We will register it with admin.", true);
+    return;
+  }
+
+  if (complaintState.awaitingDetails && !buttonText) {
+    addMessage(text, false);
+    chatInput.value = '';
+    complaintState.awaitingDetails = false;
+
+    if (text.trim().length < 8) {
+      addMessage("Please provide a bit more detail so we can help properly.", true);
+      complaintState.awaitingDetails = true;
+      return;
+    }
+
+    try {
+      await saveComplaintToBackend("other", text.trim());
+      addMessage(`Your complaint is registered. If urgent, call admin on ${ADMIN_CONTACT_NUMBER}.`, true);
+    } catch (error) {
+      console.error("Complaint save failed:", error);
+      addMessage("Could not register complaint right now due to server/database issue. Please try again shortly.", true);
+    }
+    return;
+  }
 
   if (repeatState.active) {
       const pickedOrder = findRepeatOrderByButton(text);
@@ -784,7 +870,7 @@ async function handleSend(buttonText = null) {
       addMessage("Taking you to our story...", true);
       setTimeout(() => {
           // Change this to your actual about page URL
-          window.location.href = "about-page.html"; 
+        window.location.href = "about-page.html?from=chatbot";
       }, 1500);
      console.log("empty"); 
   }

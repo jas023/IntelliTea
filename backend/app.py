@@ -2,6 +2,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import requests
 from dotenv import load_dotenv
 from groq import Groq
 from supabase import create_client, Client
@@ -14,8 +15,13 @@ load_dotenv(override=True)
 # --- SUPABASE CONNECTION ---
 SUPABASE_URL = os.getenv("SUPABASE_URL") 
 # Prefer service role key on backend to bypass RLS for inserts.
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+SUPABASE_KEY = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_SECRET_KEY")
+    or os.getenv("SUPABASE_KEY")
+)
 supabase = None
+supabase_error = None
 
 # --- Initialize the app ---
 app = Flask(__name__)
@@ -30,7 +36,61 @@ else:
         supabase.table("orders").select("*").limit(1).execute()
         print("✅ Successfully connected to Supabase!")
     except Exception as e:
+        supabase_error = str(e)
         print(f"❌ Connection failed: {e}")
+
+
+def insert_via_rest(table_name, payload):
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise Exception("Supabase URL/key missing for REST fallback")
+
+    url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table_name}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
+    if not response.ok:
+        raise Exception(f"REST insert failed ({response.status_code}): {response.text}")
+    try:
+        return response.json()
+    except Exception:
+        return []
+
+
+def fetch_via_rest(table_name, select_cols="*", limit=10, order_by=None, ascending=False):
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise Exception("Supabase URL/key missing for REST fallback")
+
+    params = {
+        "select": select_cols,
+        "limit": str(limit)
+    }
+    if order_by:
+        direction = "asc" if ascending else "desc"
+        params["order"] = f"{order_by}.{direction}"
+
+    url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/{table_name}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Prefer": "count=exact"
+    }
+    response = requests.get(url, headers=headers, params=params, timeout=15)
+    if not response.ok:
+        raise Exception(f"REST fetch failed ({response.status_code}): {response.text}")
+
+    rows = response.json() if response.text else []
+    count = None
+    content_range = response.headers.get("content-range")
+    if content_range and "/" in content_range:
+        try:
+            count = int(content_range.split("/")[-1])
+        except Exception:
+            count = None
+    return rows, count
     
 
 
@@ -158,11 +218,6 @@ def create_order():
 def save_order():
     data = request.json
     try:
-        if supabase is None:
-            return jsonify({
-                "error": "Supabase is not configured on backend. Ensure backend/.env has SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY), then restart backend server."
-            }), 500
-
         amount = data.get("amount", 0)
         try:
             amount = float(amount)
@@ -180,17 +235,28 @@ def save_order():
         if customer_phone:
             order_payload["customer_phone"] = str(customer_phone)
 
-        # Try insert with customer_phone when available; fallback for older schema.
-        try:
-            response = supabase.table("orders").insert(order_payload).execute()
-        except Exception as insert_error:
-            if "customer_phone" in order_payload and ("customer_phone" in str(insert_error) or "column" in str(insert_error).lower()):
-                order_payload.pop("customer_phone", None)
+        if supabase is not None:
+            # Try insert with customer_phone when available; fallback for older schema.
+            try:
                 response = supabase.table("orders").insert(order_payload).execute()
-            else:
+                return jsonify({"status": "success", "data": response.data})
+            except Exception as insert_error:
+                if "customer_phone" in order_payload and ("customer_phone" in str(insert_error) or "column" in str(insert_error).lower()):
+                    order_payload.pop("customer_phone", None)
+                    response = supabase.table("orders").insert(order_payload).execute()
+                    return jsonify({"status": "success", "data": response.data})
                 raise
 
-        return jsonify({"status": "success", "data": response.data})
+        # Fallback path when supabase-py client init failed.
+        try:
+            rest_data = insert_via_rest("orders", order_payload)
+            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback"})
+        except Exception as rest_error:
+            if "customer_phone" in order_payload and "column" in str(rest_error).lower():
+                order_payload.pop("customer_phone", None)
+                rest_data = insert_via_rest("orders", order_payload)
+                return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback"})
+            raise
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -199,11 +265,57 @@ def save_order():
 def save_complaint():
     data = request.json
     try:
-        response = supabase.table("complaints").insert({
+        complaint_payload = {
             "issue": data.get("issue"),
             "details": data.get("details")
-        }).execute()
-        return jsonify({"status": "success"})
+        }
+
+        if supabase is not None:
+            response = supabase.table("complaints").insert(complaint_payload).execute()
+            return jsonify({"status": "success", "data": response.data})
+
+        # Fallback path when supabase-py client init failed.
+        rest_data = insert_via_rest("complaints", complaint_payload)
+        return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "warning": supabase_error})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/complaints', methods=['GET'])
+def get_complaints():
+    try:
+        limit_raw = request.args.get("limit", "20")
+        try:
+            limit = max(1, min(int(limit_raw), 100))
+        except Exception:
+            limit = 20
+
+        if supabase is not None:
+            response = supabase.table("complaints") \
+                .select("id,issue,details,created_at", count="exact") \
+                .order("created_at", desc=True) \
+                .limit(limit) \
+                .execute()
+            return jsonify({
+                "status": "success",
+                "data": response.data or [],
+                "count": response.count or 0
+            })
+
+        rows, count = fetch_via_rest(
+            "complaints",
+            select_cols="id,issue,details,created_at",
+            limit=limit,
+            order_by="created_at",
+            ascending=False
+        )
+        return jsonify({
+            "status": "success",
+            "data": rows or [],
+            "count": count if count is not None else len(rows or []),
+            "mode": "rest-fallback",
+            "warning": supabase_error
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
