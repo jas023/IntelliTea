@@ -39,21 +39,25 @@ for placing orders, filing complaints, and getting business information.
 
 ---
 
-## 📁 Project Structure
+##📁 Project Structure
+
 IntelliTea/
-├── docs/               # Frontend (GitHub Pages)
-│   ├── index.html      # Landing page
-│   ├── phone-page.html # Customer phone entry
-│   ├── about-page.html # About / business info
-│   ├── recipe.html     # Tea recipes
-├── admin/              # Admin portal 
-│   ├── dashboard.html  # dashboard page
-│   ├── order-managemnet.html #oders page
-│   ├── signin.html     # signin page for admin
-├── backend/            # Python Flask backend
-│   └── app.py          # Main chatbot + API routes
-├── requirements.txt    # Python dependencies
-└── README.md
+├── docs/                         # Frontend (GitHub Pages)
+│   ├── index.html               # Landing page
+│   ├── phone-page.html         # Customer phone entry page
+│   ├── about-page.html         # About / Business information page
+│   └── recipe.html             # Tea recipes page
+│
+├── admin/                       # Admin Portal
+│   ├── dashboard.html          # Dashboard page
+│   ├── order-management.html   # Orders management page
+│   └── signin.html            # Admin sign-in page
+│
+├── backend/                     # Python Flask Backend
+│   └── app.py                 # Main chatbot logic + API routes
+│
+├── requirements.txt            # Python dependencies
+└── README.md                   # Project documentation
 ---
 
 ## ⚙️ How to Run Locally
