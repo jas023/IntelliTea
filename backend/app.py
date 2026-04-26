@@ -34,10 +34,10 @@ else:
     try:
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         supabase.table("orders").select("*").limit(1).execute()
-        print("✅ Successfully connected to Supabase!")
+        print("Supabase client initialized successfully.")
     except Exception as e:
         supabase_error = str(e)
-        print(f"❌ Connection failed: {e}")
+        print(f"Supabase client init failed, REST fallback will be used: {e}")
 
 
 def insert_via_rest(table_name, payload):

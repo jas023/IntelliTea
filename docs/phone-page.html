@@ -212,7 +212,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         modal.classList.add('hidden');
     }
 
-    async function submitData() {
+    async function submitData(evt) {
     const nameInput = document.getElementById('name-input');
     const phoneDisplay = document.getElementById('phone-display');
     const countryCode = document.getElementById('country-code');
@@ -231,20 +231,20 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     }
 
     // Change button text to show it's working
-    const confirmBtn = event.target; 
+    const confirmBtn = (evt && evt.target) || document.querySelector('#confirm-modal button');
     const originalText = confirmBtn.innerText;
     confirmBtn.innerText = "Saving...";
     confirmBtn.disabled = true;
 
     try {
-        // 1. Insert into Supabase 'leads' table
-        const { data, error } = await _supabase
+        const { error } = await _supabase
             .from('leads')
             .insert([
                 { full_name: name, phone_number: fullPhone }
             ]);
 
-        if (error) throw error;
+        // If this phone already exists, continue the flow instead of blocking the user.
+        if (error && error.code !== '23505') throw error;
 
         // Persist customer identity for checkout flow.
         localStorage.setItem("intelliTeaCustomerPhone", localPhone);
@@ -254,8 +254,8 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         window.location.href = `chatbot-ui.html?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(fullPhone)}`;
 
     } catch (error) {
-        console.error("Error saving to Supabase:", error.message);
-        alert("Failed to save. Please check your connection.");
+        console.error("Error saving to Supabase:", error?.message || error);
+        alert("Failed to save right now. Please try again in a moment.");
         confirmBtn.innerText = originalText;
         confirmBtn.disabled = false;
     }

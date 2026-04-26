@@ -174,7 +174,7 @@ function validateAddressText(address) {
 
   const lower = normalized.toLowerCase();
   const addressKeywords = /(house|flat|apt|apartment|road|rd|street|st|lane|ln|nagar|colony|sector|block|village|town|city|near|district|tehsil|po|post)/;
-  if (!addressKeywords.test(lower)) {
+    if (!addressKeywords.test(lower) && !/(chownk|market|bazar|area|locality)/i.test(text)) {
     return { valid: false, message: "Please include proper address details like house/flat, road/area, city and pincode." };
   }
 
@@ -742,6 +742,8 @@ async function handleSend(buttonText = null) {
       if (orderDraft.expectingAddress) {
         const addressCheck = validateAddressText(text);
         if (!addressCheck.valid) {
+          addMessage(text, false);
+          if (!buttonText) chatInput.value = '';
           addMessage(addressCheck.message, true);
           return;
         }
