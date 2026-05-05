@@ -45,7 +45,7 @@
 </div>
 <!-- Header -->
 <header class="relative z-10 flex items-center p-4 gap-4 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10">
-<button onclick="window.history.back()" class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
+<button onclick="goBackToChat()" class="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 transition-colors">
 <span class="material-symbols-outlined text-brand-dark dark:text-primary">arrow_back</span>
 </button>
 <div class="flex items-center gap-2">
@@ -113,7 +113,8 @@ const ORDER_STORAGE = {
   orderId: "intelliTeaOrderId",
   paymentStatus: "intelliTeaPaymentStatus",
   utrNo: "intelliTeaUtrNo",
-  customerPhone: "intelliTeaCustomerPhone"
+  customerPhone: "intelliTeaCustomerPhone",
+  returnFromPayment: "intelliTeaReturnFromPayment"
 };
 
 const SUPABASE_URL = "https://tmxxjzqzukphngjfkizs.supabase.co";
@@ -125,11 +126,33 @@ function extractPhoneFromText(text) {
   return direct && direct[1] ? direct[1] : null;
 }
 
+function getOrCreateOrderIdempotencyKey() {
+  const keyName = "intelliTeaOrderIdempotencyKey";
+  const existing = localStorage.getItem(keyName);
+  if (existing) return existing;
+  const created = (crypto.randomUUID && crypto.randomUUID()) || (`order_${Math.random().toString(16).slice(2)}_${Date.now()}`);
+  localStorage.setItem(keyName, created);
+  return created;
+}
+
+function goBackToChat() {
+  localStorage.setItem(ORDER_STORAGE.returnFromPayment, "1");
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  window.location.href = "chatbot-ui.html?from=payment";
+}
+
 async function saveOrderToBackend(payload) {
+  const withKey = {
+    ...payload,
+    idempotency_key: payload.idempotency_key || getOrCreateOrderIdempotencyKey()
+  };
   const response = await fetch("http://localhost:5000/api/save-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(withKey)
   });
 
   if (!response.ok) {
@@ -147,54 +170,17 @@ async function saveOrderToBackend(payload) {
 }
 
 async function saveOrderWithFallback(payload) {
+  const withKey = {
+    ...payload,
+    idempotency_key: payload.idempotency_key || getOrCreateOrderIdempotencyKey()
+  };
   try {
-    const backendResult = await saveOrderToBackend(payload);
+    const backendResult = await saveOrderToBackend(withKey);
     const orderId = backendResult?.data?.[0]?.id || null;
     return { saved: true, orderId };
   } catch (backendError) {
-    console.error("Backend order save failed on payment page, trying Supabase REST:", backendError);
-
-    const createRestInsert = (bodyPayload) => fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify(bodyPayload)
-    });
-
-    let restResponse = await createRestInsert({ ...payload, status: "Pending" });
-
-    if (!restResponse.ok && payload.customer_phone) {
-      const retryPayload = { ...payload, status: "Pending" };
-      delete retryPayload.customer_phone;
-      restResponse = await createRestInsert(retryPayload);
-    }
-
-    if (!restResponse.ok) {
-      let restError = "Supabase fallback save failed";
-      try {
-        const errorData = await restResponse.json();
-        restError = errorData.message || errorData.error || JSON.stringify(errorData);
-      } catch (_) {
-        // Keep default.
-      }
-      throw new Error(restError);
-    }
-
-    let orderId = null;
-    try {
-      const rowData = await restResponse.json();
-      if (Array.isArray(rowData) && rowData.length > 0) {
-        orderId = rowData[0].id || null;
-      }
-    } catch (_) {
-      // Keep null order id if response parsing fails.
-    }
-
-    return { saved: true, orderId };
+    console.error("Backend order save failed on payment page:", backendError);
+    throw backendError;
   }
 }
 
@@ -212,45 +198,17 @@ function setPaymentStatusMessage(text, type = "pending") {
   }
 }
 
-async function markOrderPaid(orderId, utrNo) {
-  const payloadWithPayment = {
-    status: "Paid",
-    payment_status: "paid",
-    utr_no: utrNo,
-    payment_verified: true
-  };
-
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`, {
-    method: "PATCH",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation"
-    },
-    body: JSON.stringify(payloadWithPayment)
+async function submitPaymentProof(orderId, utrNo) {
+  const response = await fetch("http://localhost:5000/api/submit-payment-proof", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order_id: orderId, utr_no: utrNo })
   });
 
-  if (response.ok) {
-    return true;
-  }
-
-  // Fallback for schemas without payment-specific columns.
-  const fallbackResponse = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`, {
-    method: "PATCH",
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation"
-    },
-    body: JSON.stringify({ status: "Paid" })
-  });
-
-  if (!fallbackResponse.ok) {
-    let errText = "Failed to mark payment as paid";
+  if (!response.ok) {
+    let errText = "Failed to submit payment proof";
     try {
-      const errData = await fallbackResponse.json();
+      const errData = await response.json();
       errText = errData.message || errData.error || JSON.stringify(errData);
     } catch (_) {
       // Keep fallback text.
@@ -298,6 +256,8 @@ if (!storedAmount || storedAmount === "0" || parseFloat(storedAmount) <= 10) {
         const existingStatus = localStorage.getItem(ORDER_STORAGE.paymentStatus);
         if (existingStatus === "paid") {
           setPaymentStatusMessage("Payment status: Paid and shared with admin", "paid");
+        } else if (existingStatus === "submitted") {
+          setPaymentStatusMessage("Payment status: Submitted and awaiting admin verification", "pending");
         } else {
           setPaymentStatusMessage("Payment status: Pending confirmation", "pending");
         }
@@ -313,7 +273,20 @@ const whatsappNumber = "9464364880"; // <--- CHANGE TO YOUR NUMBER (WITH 91)
 const upiLink = `upi://pay?pa=${vpa}&pn=${encodeURIComponent(name)}&am=${storedAmount}&cu=INR&tn=TeaOrder`;
 
 // 4. Update the Button and QR Code
-document.getElementById("pay-now-btn").href = upiLink;
+const payNowBtn = document.getElementById("pay-now-btn");
+payNowBtn.href = upiLink;
+payNowBtn.addEventListener("click", (event) => {
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    // Force navigation to the UPI deep link when button is pressed on mobile devices.
+    event.preventDefault();
+    window.location.href = upiLink;
+    return;
+  }
+
+  // Desktop browsers usually cannot open UPI apps directly.
+  event.preventDefault();
+  alert("UPI app link works on mobile devices. Please scan the QR code above to complete payment.");
+});
 
 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}&margin=10`;
 document.getElementById("qr-image").src = qrUrl;
@@ -342,25 +315,18 @@ document.getElementById("submit-utr-btn").addEventListener("click", async () => 
   }
 
   try {
-    await markOrderPaid(orderId, utrNo);
-    localStorage.setItem(ORDER_STORAGE.paymentStatus, "paid");
+    await submitPaymentProof(orderId, utrNo);
+    localStorage.setItem(ORDER_STORAGE.paymentStatus, "submitted");
     localStorage.setItem(ORDER_STORAGE.utrNo, utrNo);
-    setPaymentStatusMessage(`Payment status: Paid (UTR ${utrNo}) shared with admin`, "paid");
+    setPaymentStatusMessage(`Payment status: Submitted (UTR ${utrNo}) for admin verification`, "pending");
 
-    const paidWaMsg = `Hello! I paid ₹${storedAmount} for Order #${orderId}. UTR/Ref: ${utrNo}. Sharing screenshot now.`;
-    document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(paidWaMsg)}`;
+    const submittedWaMsg = `Hello! I paid ₹${storedAmount} for Order #${orderId}. UTR/Ref: ${utrNo}. Please verify payment.`;
+    document.getElementById("whatsapp-btn").href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(submittedWaMsg)}`;
   } catch (error) {
-    console.error("Failed to mark payment paid:", error);
+    console.error("Failed to submit payment proof:", error);
     setPaymentStatusMessage(`Could not update payment status: ${error.message}`, "error");
   }
 });
 
-const handlePayment = () => {
-  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    window.location.href = "upi://pay?pa=menkaarora022@okhdfcbank...";
-  } else {
-    alert("Please scan the QR code above to pay, as UPI apps are only available on mobile devices. & after paying share the screenshot on whatsapp to confirm your order.");
-  }
-};
 </script>
 </html>

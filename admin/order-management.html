@@ -162,6 +162,37 @@
             return match && match[1] ? match[1] : null;
         }
 
+        function normalizeOrderStatus(rawStatus) {
+            const s = String(rawStatus || '').toLowerCase().trim();
+            if (s === 'delivered') return 'delivered';
+            return 'pending';
+        }
+
+        function normalizePaymentStatus(order) {
+            const explicit = String(order.payment_status || '').toLowerCase().trim();
+            if (explicit === 'paid') return 'paid';
+            if (explicit === 'pending_verification') return 'pending_verification';
+            if (explicit === 'pending') return 'pending';
+
+            // Legacy fallback if only status was previously used for payment states.
+            const legacy = String(order.status || '').toLowerCase().trim();
+            if (legacy === 'paid') return 'paid';
+            if (legacy === 'payment submitted' || legacy === 'pending payment' || legacy === 'pending_verification') return 'pending_verification';
+            return 'pending';
+        }
+
+        function paymentBadgeClass(status) {
+            if (status === 'paid') return 'bg-emerald-100 text-emerald-700';
+            if (status === 'pending_verification') return 'bg-blue-100 text-blue-700';
+            return 'bg-amber-100 text-amber-700';
+        }
+
+        function paymentLabel(status) {
+            if (status === 'paid') return 'paid';
+            if (status === 'pending_verification') return 'pending verification';
+            return 'pending';
+        }
+
         async function fetchOrders() {
             console.log("Fetching real data...");
             const { data: orders, error } = await _supabase
@@ -189,8 +220,9 @@
                }
            });
 
-           orders.forEach(order => {
-    const paymentStatus = (order.payment_status || (String(order.status || '').toLowerCase() === 'paid' ? 'paid' : 'pending')).toLowerCase();
+            orders.forEach(order => {
+        const fulfillmentStatus = normalizeOrderStatus(order.status);
+        const paymentStatus = normalizePaymentStatus(order);
     const utrNo = order.utr_no || '-';
     const phone = order.customer_phone || extractPhone(order.address);
     const isRepeat = phone && phoneCounts[phone] > 1;
@@ -204,13 +236,13 @@
             <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">${order.address || 'No Address Provided'}</td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase 
-                    ${order.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                    ${order.status}
+                    ${fulfillmentStatus === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                    ${fulfillmentStatus}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
-                    ${paymentStatus}
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${paymentBadgeClass(paymentStatus)}">
+                    ${paymentLabel(paymentStatus)}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-600">${utrNo}</td>
@@ -221,7 +253,7 @@
                         MARK PAID
                     </button>
                 ` : ''}
-                ${order.status !== 'delivered' ? `
+                ${fulfillmentStatus !== 'delivered' ? `
                     <button onclick="updateOrderStatus(${order.id}, 'delivered')" 
                             class="bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full hover:bg-primary/90 transition-all">
                         MARK DELIVERED
@@ -245,8 +277,8 @@
 
             // Update stats
             document.getElementById('totalOrdersCount').innerText = orders.length;
-            document.getElementById('pendingOrdersCount').innerText = orders.filter(o => o.status !== 'delivered').length;
-            document.getElementById('deliveredOrdersCount').innerText = orders.filter(o => o.status === 'delivered').length;
+            document.getElementById('pendingOrdersCount').innerText = orders.filter(o => normalizeOrderStatus(o.status) !== 'delivered').length;
+            document.getElementById('deliveredOrdersCount').innerText = orders.filter(o => normalizeOrderStatus(o.status) === 'delivered').length;
         }
 
         fetchOrders();
@@ -256,7 +288,6 @@
     if (utrNo === null) return;
 
     const payload = {
-        status: 'Paid',
         payment_status: 'paid',
         utr_no: utrNo.trim() || null,
         payment_verified: true
@@ -267,11 +298,11 @@
         .update(payload)
         .eq('id', orderId);
 
-    // Fallback for schemas where payment-specific columns are not added yet.
+    // Fallback for very old schema where payment-specific columns are not added yet.
     if (error) {
         const fallback = await _supabase
             .from('orders')
-            .update({ status: 'Paid' })
+            .update({ status: 'pending' })
             .eq('id', orderId);
         error = fallback.error;
     }
@@ -326,8 +357,8 @@ function viewOrder(order) {
     content.innerHTML = `
         <div class="grid grid-cols-2 gap-4">
             <div><p class="text-xs text-slate-400 uppercase font-bold">Order ID</p><p class="font-semibold">#${order.id}</p></div>
-            <div><p class="text-xs text-slate-400 uppercase font-bold">Status</p><p class="font-semibold uppercase text-primary">${order.status}</p></div>
-            <div><p class="text-xs text-slate-400 uppercase font-bold">Payment</p><p class="font-semibold uppercase text-primary">${order.payment_status || (String(order.status || '').toLowerCase() === 'paid' ? 'paid' : 'pending')}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Status</p><p class="font-semibold uppercase text-primary">${normalizeOrderStatus(order.status)}</p></div>
+            <div><p class="text-xs text-slate-400 uppercase font-bold">Payment</p><p class="font-semibold uppercase text-primary">${paymentLabel(normalizePaymentStatus(order))}</p></div>
             <div><p class="text-xs text-slate-400 uppercase font-bold">UTR/Ref</p><p class="font-semibold">${order.utr_no || '-'}</p></div>
             <div><p class="text-xs text-slate-400 uppercase font-bold">Phone</p><p class="font-semibold">${order.customer_phone || extractPhone(order.address) || '-'}</p></div>
             <div class="col-span-2"><p class="text-xs text-slate-400 uppercase font-bold">Items Ordered</p><p class="font-semibold">${order.items}</p></div>

@@ -99,7 +99,10 @@ const ORDER_STORAGE = {
   utrNo: "intelliTeaUtrNo",
   customerPhone: "intelliTeaCustomerPhone",
   repeatPromptShown: "intelliTeaRepeatPromptShown",
-  repeatOrderData: "intelliTeaRepeatOrderData"
+  repeatOrderData: "intelliTeaRepeatOrderData",
+  chatSnapshot: "intelliTeaChatSnapshot",
+   returnFromPayment: "intelliTeaReturnFromPayment",
+   orderIdempotencyKey: "intelliTeaOrderIdempotencyKey"
 };
 
 const SUPABASE_URL = "https://tmxxjzqzukphngjfkizs.supabase.co";
@@ -128,10 +131,62 @@ const repeatState = {
 };
 
 const complaintState = {
-  awaitingDetails: false
+  awaitingDetails: false,
+  complaintType: null
 };
 
 const ADMIN_CONTACT_NUMBER = "9464364880";
+
+function saveChatSnapshot() {
+  try {
+    const snapshot = {
+      chatHtml: chatMain.innerHTML,
+      orderDraft,
+      repeatState,
+      complaintState,
+      ts: Date.now()
+    };
+    localStorage.setItem(ORDER_STORAGE.chatSnapshot, JSON.stringify(snapshot));
+  } catch (error) {
+    console.error("Failed to save chat snapshot:", error);
+  }
+}
+
+function restoreChatSnapshot() {
+  try {
+    const raw = localStorage.getItem(ORDER_STORAGE.chatSnapshot);
+    if (!raw) return false;
+
+    const snapshot = JSON.parse(raw);
+    if (!snapshot || !snapshot.chatHtml) return false;
+
+    chatMain.innerHTML = snapshot.chatHtml;
+
+    if (snapshot.orderDraft && typeof snapshot.orderDraft === "object") {
+      Object.assign(orderDraft, snapshot.orderDraft);
+    }
+    if (snapshot.repeatState && typeof snapshot.repeatState === "object") {
+      Object.assign(repeatState, snapshot.repeatState);
+    }
+    if (snapshot.complaintState && typeof snapshot.complaintState === "object") {
+      Object.assign(complaintState, snapshot.complaintState);
+    }
+
+    chatMain.scrollTop = chatMain.scrollHeight;
+    return true;
+  } catch (error) {
+    console.error("Failed to restore chat snapshot:", error);
+    return false;
+  }
+}
+
+function shouldRestoreFromPayment() {
+  const params = new URLSearchParams(window.location.search || "");
+  const fromQuery = (params.get("from") || "").toLowerCase();
+  const fromReferrer = (document.referrer || "").toLowerCase().includes("payment.html");
+  const fromFlag = localStorage.getItem(ORDER_STORAGE.returnFromPayment) === "1";
+  return fromQuery === "payment" || fromReferrer || fromFlag;
+}
 
 function resetOrderState() {
   localStorage.removeItem(ORDER_STORAGE.total);
@@ -142,6 +197,7 @@ function resetOrderState() {
   localStorage.removeItem(ORDER_STORAGE.orderId);
   localStorage.removeItem(ORDER_STORAGE.paymentStatus);
   localStorage.removeItem(ORDER_STORAGE.utrNo);
+  localStorage.removeItem(ORDER_STORAGE.orderIdempotencyKey);
   // Keep customer phone between sessions so users don't need to re-enter it in address.
   localStorage.removeItem(ORDER_STORAGE.repeatPromptShown);
   localStorage.removeItem(ORDER_STORAGE.repeatOrderData);
@@ -343,10 +399,14 @@ function getLatestBillTextFromAi() {
 }
 
 async function saveOrderToBackend(payload) {
+  const withKey = {
+    ...payload,
+    idempotency_key: payload.idempotency_key || getOrCreateOrderIdempotencyKey()
+  };
   const response = await fetch("http://localhost:5000/api/save-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(withKey)
   });
 
   if (!response.ok) {
@@ -364,55 +424,17 @@ async function saveOrderToBackend(payload) {
 }
 
 async function saveOrderWithFallback(payload) {
+  const withKey = {
+    ...payload,
+    idempotency_key: payload.idempotency_key || getOrCreateOrderIdempotencyKey()
+  };
   try {
-    const backendResult = await saveOrderToBackend(payload);
+    const backendResult = await saveOrderToBackend(withKey);
     const orderId = backendResult?.data?.[0]?.id || null;
     return { saved: true, orderId };
   } catch (backendError) {
-    console.error("Backend order save failed, trying direct Supabase REST:", backendError);
-
-    const createRestInsert = (bodyPayload) => fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify(bodyPayload)
-    });
-
-    let restResponse = await createRestInsert({ ...payload, status: "Pending" });
-
-    if (!restResponse.ok && payload.customer_phone) {
-      // Retry without customer_phone for older schema.
-      const retryPayload = { ...payload, status: "Pending" };
-      delete retryPayload.customer_phone;
-      restResponse = await createRestInsert(retryPayload);
-    }
-
-    if (!restResponse.ok) {
-      let restError = "Supabase fallback save failed";
-      try {
-        const errorData = await restResponse.json();
-        restError = errorData.message || errorData.error || JSON.stringify(errorData);
-      } catch (_) {
-        // Keep default.
-      }
-      throw new Error(restError);
-    }
-
-    let orderId = null;
-    try {
-      const rowData = await restResponse.json();
-      if (Array.isArray(rowData) && rowData.length > 0) {
-        orderId = rowData[0].id || null;
-      }
-    } catch (_) {
-      // Keep null order id if response parsing fails.
-    }
-
-    return { saved: true, orderId };
+    console.error("Backend order save failed:", backendError);
+    throw backendError;
   }
 }
 
@@ -420,7 +442,15 @@ async function saveComplaintToBackend(issue, details) {
   const response = await fetch("http://localhost:5000/api/save-complaint", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ issue, details })
+    body: JSON.stringify({
+      issue,
+      details,
+      complaint_type: complaintState.complaintType,
+      customer_phone: localStorage.getItem(ORDER_STORAGE.customerPhone) || null,
+      order_history: localStorage.getItem(ORDER_STORAGE.pendingItems) || buildDraftItemsSummary() || null,
+      payment_done: localStorage.getItem(ORDER_STORAGE.paymentStatus) === "paid" ? true : false,
+      order_id: localStorage.getItem(ORDER_STORAGE.orderId) || null
+    })
   });
 
   if (!response.ok) {
@@ -442,6 +472,13 @@ async function saveComplaintToBackend(issue, details) {
   return response.json();
 }
 
+function getOrCreateOrderIdempotencyKey() {
+  const existing = localStorage.getItem(ORDER_STORAGE.orderIdempotencyKey);
+  if (existing) return existing;
+  const created = (crypto.randomUUID && crypto.randomUUID()) || (`order_${Math.random().toString(16).slice(2)}_${Date.now()}`);
+  localStorage.setItem(ORDER_STORAGE.orderIdempotencyKey, created);
+  return created;
+}
 function getSessionId() {
   let sid = localStorage.getItem("intelliTeaSessionId");
   if (!sid) {
@@ -497,6 +534,7 @@ function addMessage(text, isAi) {
   msgDiv.innerHTML = isAi ? iconHtml + contentHtml : contentHtml + iconHtml;
   chatMain.appendChild(msgDiv);
   chatMain.scrollTop = chatMain.scrollHeight;
+  saveChatSnapshot();
   }
 
 function parseAmountFromText(text) {
@@ -553,23 +591,25 @@ async function handleSend(buttonText = null) {
   if (!text) return;
 
   if (text === "Raise Complaint") {
+    complaintState.complaintType = null;
+    complaintState.awaitingDetails = false;
+    addMessage(text, false);
     addMessage("Please select your complaint type. [Order Not Received] [Quality Issue] [Other Complaint]", true);
     return;
   }
 
   if (text === "Order Not Received") {
-    try {
-      await saveComplaintToBackend("order not received", "Order not received (selected from chatbot quick option)");
-      addMessage(`Please call admin on ${ADMIN_CONTACT_NUMBER} for immediate help. Your complaint is registered.`, true);
-    } catch (error) {
-      console.error("Complaint save failed:", error);
-      addMessage(`Please call admin on ${ADMIN_CONTACT_NUMBER} for immediate help. We could not register this complaint right now.`, true);
-    }
+    complaintState.complaintType = "order_not_received";
+    complaintState.awaitingDetails = true;
+    addMessage(text, false);
+    addMessage("Please type your order details, phone number, order history, and whether payment was done. We will save it for admin review.", true);
     return;
   }
 
   if (text === "Quality Issue") {
     try {
+      addMessage(text, false);
+      complaintState.complaintType = "quality_issue";
       await saveComplaintToBackend("order quality", "Quality issue selected from chatbot quick option");
       addMessage("Sorry for the inconvenience. We will improve and replace it in your next order. Your complaint is registered.", true);
     } catch (error) {
@@ -581,6 +621,8 @@ async function handleSend(buttonText = null) {
 
   if (text === "Other Complaint") {
     complaintState.awaitingDetails = true;
+    complaintState.complaintType = "other";
+    addMessage(text, false);
     addMessage("Please type your complaint in detail. We will register it with admin.", true);
     return;
   }
@@ -597,7 +639,8 @@ async function handleSend(buttonText = null) {
     }
 
     try {
-      await saveComplaintToBackend("other", text.trim());
+      const savedIssue = complaintState.complaintType === "order_not_received" ? "order not received" : "other";
+      await saveComplaintToBackend(savedIssue, text.trim());
       addMessage(`Your complaint is registered. If urgent, call admin on ${ADMIN_CONTACT_NUMBER}.`, true);
     } catch (error) {
       console.error("Complaint save failed:", error);
@@ -850,6 +893,9 @@ async function handleSend(buttonText = null) {
 
       addMessage(`Final Total: ₹${finalAmount}. Opening payment...`, true);
 
+        saveChatSnapshot();
+        localStorage.setItem(ORDER_STORAGE.returnFromPayment, "1");
+
       setTimeout(() => {
           window.location.href = "payment.html";
       }, 800);
@@ -869,6 +915,7 @@ async function handleSend(buttonText = null) {
 
   // If the user clicks the about button, redirect them immediately!
   if (text === "Know About") {
+      addMessage(text, false);
       addMessage("Taking you to our story...", true);
       setTimeout(() => {
           // Change this to your actual about page URL
@@ -958,6 +1005,11 @@ chatInput.addEventListener('keypress', (e) => {
 // Initial greeting to trigger the AI
 window.addEventListener('load', () => {
   seedCustomerPhoneFromEntry();
+
+  if (shouldRestoreFromPayment() && restoreChatSnapshot()) {
+    localStorage.removeItem(ORDER_STORAGE.returnFromPayment);
+    return;
+  }
 
   // Prevent stale totals/orders from previous completed sessions.
   resetOrderState();

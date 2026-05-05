@@ -2,6 +2,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import hashlib
+import json
+import time
 import requests
 from dotenv import load_dotenv
 from groq import Groq
@@ -20,8 +23,15 @@ SUPABASE_KEY = (
     or os.getenv("SUPABASE_SECRET_KEY")
     or os.getenv("SUPABASE_KEY")
 )
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 supabase = None
 supabase_error = None
+
+# Process-local dedupe cache for quick duplicate submissions.
+RECENT_ORDER_CACHE = {}
+RECENT_ORDER_CACHE_TTL_SECONDS = 15 * 60
+RECENT_UTR_CACHE = {}
+RECENT_UTR_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 
 # --- Initialize the app ---
 app = Flask(__name__)
@@ -91,6 +101,154 @@ def fetch_via_rest(table_name, select_cols="*", limit=10, order_by=None, ascendi
         except Exception:
             count = None
     return rows, count
+
+
+def normalize_payload_for_key(data):
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def build_order_idempotency_key(data):
+    provided_key = data.get("idempotency_key")
+    if provided_key:
+        return str(provided_key)
+
+    try:
+        amount = float(data.get("amount", 0))
+    except (TypeError, ValueError):
+        amount = 0.0
+
+    normalized = {
+        "items": data.get("items"),
+        "amount": round(amount, 2),
+        "address": str(data.get("address", "")).strip().lower(),
+        "customer_phone": str(data.get("customer_phone", "")).strip(),
+    }
+    return hashlib.sha256(normalize_payload_for_key(normalized).encode("utf-8")).hexdigest()
+
+
+def record_order_event(event_type, order_id, payload=None):
+    event_payload = {
+        "event_type": event_type,
+        "order_id": order_id,
+        "payload": payload or {}
+    }
+
+    try:
+        if supabase is not None:
+            try:
+                supabase.table("order_events").insert(event_payload).execute()
+                return
+            except Exception:
+                return
+
+        insert_via_rest("order_events", event_payload)
+    except Exception:
+        return
+
+
+def get_existing_order_by_idempotency(idempotency_key):
+    if not idempotency_key or supabase is None:
+        return None
+
+    try:
+        response = supabase.table("orders").select("*").eq("idempotency_key", idempotency_key).limit(1).execute()
+        rows = getattr(response, "data", None) or []
+        if isinstance(rows, list) and rows:
+            return rows[0]
+    except Exception:
+        return None
+    return None
+
+
+def get_existing_order_from_cache(idempotency_key):
+    if not idempotency_key:
+        return None
+
+    now = time.time()
+    stale_keys = [k for k, v in RECENT_ORDER_CACHE.items() if (now - v.get("ts", 0)) > RECENT_ORDER_CACHE_TTL_SECONDS]
+    for key in stale_keys:
+        RECENT_ORDER_CACHE.pop(key, None)
+
+    cached = RECENT_ORDER_CACHE.get(idempotency_key)
+    if cached:
+        return cached.get("order")
+    return None
+
+
+def put_order_in_cache(idempotency_key, order_row):
+    if not idempotency_key or not order_row:
+        return
+    RECENT_ORDER_CACHE[idempotency_key] = {
+        "order": order_row,
+        "ts": time.time()
+    }
+
+
+def is_admin_request(req):
+    provided_key = req.headers.get("X-Admin-Key", "")
+    return bool(ADMIN_API_KEY) and provided_key == ADMIN_API_KEY
+
+
+def is_duplicate_utr(utr_no, current_order_id=None):
+    if not utr_no:
+        return False
+
+    now = time.time()
+    stale_keys = [k for k, v in RECENT_UTR_CACHE.items() if (now - v.get("ts", 0)) > RECENT_UTR_CACHE_TTL_SECONDS]
+    for key in stale_keys:
+        RECENT_UTR_CACHE.pop(key, None)
+
+    cached = RECENT_UTR_CACHE.get(utr_no)
+    if cached and str(cached.get("order_id")) != str(current_order_id):
+        return True
+
+    # DB-backed duplicate check (best effort when schema supports utr_no)
+    try:
+        if supabase is not None:
+            response = supabase.table("orders").select("id").eq("utr_no", utr_no).limit(1).execute()
+            rows = getattr(response, "data", None) or []
+            if isinstance(rows, list) and rows:
+                found_id = rows[0].get("id")
+                if str(found_id) != str(current_order_id):
+                    return True
+            return False
+    except Exception:
+        # Continue to REST fallback if client query fails.
+        pass
+
+    try:
+        url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/orders"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Prefer": "count=exact"
+        }
+        params = {
+            "select": "id",
+            "utr_no": f"eq.{utr_no}",
+            "limit": "1"
+        }
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+        if response.ok:
+            rows = response.json() if response.text else []
+            if isinstance(rows, list) and rows:
+                found_id = rows[0].get("id")
+                if str(found_id) != str(current_order_id):
+                    return True
+    except Exception:
+        # If we cannot verify against DB, rely on runtime cache only.
+        pass
+
+    return False
+
+
+def cache_utr(utr_no, order_id):
+    if not utr_no:
+        return
+    RECENT_UTR_CACHE[utr_no] = {
+        "order_id": order_id,
+        "ts": time.time()
+    }
     
 
 
@@ -133,7 +291,7 @@ CONVERSATION FLOW (Follow strictly in order):
 8. CHECKOUT: After they provide their address, say exactly: "Order saved! [Proceed to Payment]"
 
 9. COMPLAINTS: If 'Raise Complaint', ask exactly: "What happened? [Order not received] [Quality issues] [Other]"
-10. If 'Order not received': Say "Please call our admin at 9464364880. They will sort it out."
+10. If 'Order not received': Ask for the user's complaint details, order number/order history, phone number, and payment status. Then say the complaint is saved for admin review.
 11. If 'Quality issues': Say "Oh, sorry for that. We will take care of it from the next time."
 12. If 'Other': Ask "Tell me what happened." Wait for reply, then apologize.
 13. If 'Know About': Say exactly: "Read about our history here! [Know About]"
@@ -185,34 +343,6 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-import razorpay
-
-# Initialize Razorpay Client with your Test Keys
-razorpay_client = razorpay.Client(auth=("YOUR_TEST_KEY_ID", "YOUR_TEST_KEY_SECRET"))
-
-@app.route('/api/create-order', methods=['POST'])
-def create_order():
-    data = request.json
-    amount_in_rupees = int(data.get("amount", 0))
-    
-    # Razorpay expects the amount in paise (1 Rupee = 100 Paise)
-    amount_in_paise = amount_in_rupees * 100 
-    
-    # Create the order dictionary
-    order_data = {
-        "amount": amount_in_paise,
-        "currency": "INR",
-        "receipt": "receipt_001", # You can make this dynamic later when we add the database
-        "payment_capture": 1 # Auto-capture the payment
-    }
-    
-    try:
-        # Ask Razorpay for an official Order ID
-        razorpay_order = razorpay_client.order.create(data=order_data)
-        return jsonify(razorpay_order)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
   # --- ADD THIS: Save Order to Supabase ---
 @app.route('/api/save-order', methods=['POST'])
 def save_order():
@@ -222,41 +352,209 @@ def save_order():
         try:
             amount = float(amount)
         except (TypeError, ValueError):
-            amount = 0.0
+            return jsonify({"error": "Invalid amount"}), 400
 
-        order_payload = {
-            "items": data.get("items"),
-            "amount": amount,
-            "address": data.get("address", "Not provided"),
-            "status": "Pending" # Default status for new orders
-        }
+        items = data.get("items")
+        if not items:
+            return jsonify({"error": "Items are required"}), 400
+
+        address = str(data.get("address", "")).strip()
+        if not address:
+            return jsonify({"error": "Address is required"}), 400
 
         customer_phone = data.get("customer_phone")
+        idempotency_key = build_order_idempotency_key(data)
+
+        cached_order = get_existing_order_from_cache(idempotency_key)
+        if cached_order:
+            return jsonify({"status": "success", "data": [cached_order], "idempotency": True, "source": "cache"})
+
+        existing_order = get_existing_order_by_idempotency(idempotency_key)
+        if existing_order:
+            put_order_in_cache(idempotency_key, existing_order)
+            return jsonify({"status": "success", "data": [existing_order], "idempotency": True})
+
+        order_payload = {
+            "items": items,
+            "amount": amount,
+            "address": address,
+            "status": "pending",
+            "payment_status": "pending",
+            "idempotency_key": idempotency_key
+        }
+
         if customer_phone:
             order_payload["customer_phone"] = str(customer_phone)
 
         if supabase is not None:
-            # Try insert with customer_phone when available; fallback for older schema.
             try:
                 response = supabase.table("orders").insert(order_payload).execute()
-                return jsonify({"status": "success", "data": response.data})
+                created_rows = response.data or []
+                if created_rows:
+                    put_order_in_cache(idempotency_key, created_rows[0])
+                    record_order_event("order_created", created_rows[0].get("id"), {"idempotency_key": idempotency_key})
+                return jsonify({"status": "success", "data": created_rows, "idempotency_key": idempotency_key})
             except Exception as insert_error:
-                if "customer_phone" in order_payload and ("customer_phone" in str(insert_error) or "column" in str(insert_error).lower()):
-                    order_payload.pop("customer_phone", None)
-                    response = supabase.table("orders").insert(order_payload).execute()
-                    return jsonify({"status": "success", "data": response.data})
-                raise
+                fallback_payload = {
+                    "items": items,
+                    "amount": amount,
+                    "address": address,
+                    "status": "pending",
+                    "payment_status": "pending"
+                }
+                if customer_phone:
+                    fallback_payload["customer_phone"] = str(customer_phone)
+                try:
+                    response = supabase.table("orders").insert(fallback_payload).execute()
+                    created_rows = response.data or []
+                    if created_rows:
+                        put_order_in_cache(idempotency_key, created_rows[0])
+                        record_order_event("order_created", created_rows[0].get("id"), {"idempotency_key": idempotency_key, "fallback": True})
+                    return jsonify({"status": "success", "data": created_rows, "idempotency_key": idempotency_key, "warning": str(insert_error)})
+                except Exception:
+                    raise
 
         # Fallback path when supabase-py client init failed.
         try:
             rest_data = insert_via_rest("orders", order_payload)
-            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback"})
+            if rest_data and isinstance(rest_data, list) and rest_data[0].get("id"):
+                put_order_in_cache(idempotency_key, rest_data[0])
+                record_order_event("order_created", rest_data[0].get("id"), {"idempotency_key": idempotency_key, "mode": "rest-fallback"})
+            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "idempotency_key": idempotency_key})
         except Exception as rest_error:
-            if "customer_phone" in order_payload and "column" in str(rest_error).lower():
-                order_payload.pop("customer_phone", None)
-                rest_data = insert_via_rest("orders", order_payload)
-                return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback"})
-            raise
+            fallback_payload = {
+                "items": items,
+                "amount": amount,
+                "address": address,
+                "status": "pending",
+                "payment_status": "pending"
+            }
+            if customer_phone:
+                fallback_payload["customer_phone"] = str(customer_phone)
+            rest_data = insert_via_rest("orders", fallback_payload)
+            if rest_data and isinstance(rest_data, list) and rest_data[0].get("id"):
+                put_order_in_cache(idempotency_key, rest_data[0])
+                record_order_event("order_created", rest_data[0].get("id"), {"idempotency_key": idempotency_key, "mode": "rest-fallback", "fallback": True})
+            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "idempotency_key": idempotency_key, "warning": str(rest_error)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/submit-payment-proof', methods=['POST'])
+def submit_payment_proof():
+    data = request.json or {}
+    order_id = data.get("order_id")
+    utr_no = str(data.get("utr_no", "")).strip()
+
+    if not order_id:
+        return jsonify({"error": "order_id is required"}), 400
+    if not utr_no or not (8 <= len(utr_no) <= 30):
+        return jsonify({"error": "Valid utr_no is required"}), 400
+    if not all(ch.isalnum() or ch == "-" for ch in utr_no):
+        return jsonify({"error": "UTR can only contain letters, numbers, and hyphen"}), 400
+
+    if is_duplicate_utr(utr_no, current_order_id=order_id):
+        return jsonify({"error": "This UTR is already used for another order"}), 409
+
+    payment_update = {
+        "payment_status": "pending_verification",
+        "utr_no": utr_no
+    }
+
+    try:
+        if supabase is not None:
+            try:
+                response = supabase.table("orders").update(payment_update).eq("id", order_id).execute()
+                updated_rows = response.data or []
+                cache_utr(utr_no, order_id)
+                record_order_event("payment_submitted", order_id, {"utr_no": utr_no})
+                return jsonify({"status": "success", "data": updated_rows, "message": "Payment proof submitted. Awaiting admin verification."})
+            except Exception:
+                fallback_update = {"status": "pending_verification"}
+                response = supabase.table("orders").update(fallback_update).eq("id", order_id).execute()
+                updated_rows = response.data or []
+                cache_utr(utr_no, order_id)
+                record_order_event("payment_submitted", order_id, {"utr_no": utr_no, "fallback": True})
+                return jsonify({"status": "success", "data": updated_rows, "warning": "Payment columns missing; status-only update used."})
+
+        # REST fallback if client init failed.
+        url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/orders?id=eq.{order_id}"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        response = requests.patch(url, headers=headers, json=payment_update, timeout=15)
+        if not response.ok:
+            response = requests.patch(url, headers=headers, json={"status": "pending_verification"}, timeout=15)
+            if not response.ok:
+                raise Exception(f"REST payment submit failed ({response.status_code}): {response.text}")
+        cache_utr(utr_no, order_id)
+        record_order_event("payment_submitted", order_id, {"utr_no": utr_no, "mode": "rest-fallback"})
+        return jsonify({"status": "success", "data": response.json() if response.text else [], "mode": "rest-fallback", "message": "Payment proof submitted. Awaiting admin verification."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/confirm-payment', methods=['POST'])
+def confirm_payment():
+    if not ADMIN_API_KEY:
+        return jsonify({"error": "Admin payment verification is not configured. Set ADMIN_API_KEY in backend .env"}), 503
+    if not is_admin_request(request):
+        return jsonify({"error": "Unauthorized. Admin key required."}), 401
+
+    data = request.json or {}
+    order_id = data.get("order_id")
+    utr_no = str(data.get("utr_no", "")).strip()
+
+    if not order_id:
+        return jsonify({"error": "order_id is required"}), 400
+    if not utr_no or not (8 <= len(utr_no) <= 30):
+        return jsonify({"error": "Valid utr_no is required"}), 400
+    if not all(ch.isalnum() or ch == "-" for ch in utr_no):
+        return jsonify({"error": "UTR can only contain letters, numbers, and hyphen"}), 400
+
+    if is_duplicate_utr(utr_no, current_order_id=order_id):
+        return jsonify({"error": "This UTR is already used for another order"}), 409
+
+    payment_update = {
+        "payment_status": "paid",
+        "utr_no": utr_no
+    }
+
+    try:
+        if supabase is not None:
+            try:
+                response = supabase.table("orders").update(payment_update).eq("id", order_id).execute()
+                updated_rows = response.data or []
+                cache_utr(utr_no, order_id)
+                record_order_event("payment_confirmed", order_id, {"utr_no": utr_no, "actor": "admin"})
+                return jsonify({"status": "success", "data": updated_rows})
+            except Exception:
+                fallback_update = {"status": "Paid"}
+                response = supabase.table("orders").update(fallback_update).eq("id", order_id).execute()
+                updated_rows = response.data or []
+                cache_utr(utr_no, order_id)
+                record_order_event("payment_confirmed", order_id, {"utr_no": utr_no, "fallback": True, "actor": "admin"})
+                return jsonify({"status": "success", "data": updated_rows, "warning": "Payment columns missing; status-only update used."})
+
+        # REST fallback if client init failed.
+        url = f"{SUPABASE_URL.rstrip('/')}/rest/v1/orders?id=eq.{order_id}"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        response = requests.patch(url, headers=headers, json=payment_update, timeout=15)
+        if not response.ok:
+            response = requests.patch(url, headers=headers, json={"status": "Paid"}, timeout=15)
+            if not response.ok:
+                raise Exception(f"REST payment confirm failed ({response.status_code}): {response.text}")
+        cache_utr(utr_no, order_id)
+        record_order_event("payment_confirmed", order_id, {"utr_no": utr_no, "mode": "rest-fallback", "actor": "admin"})
+        return jsonify({"status": "success", "data": response.json() if response.text else [], "mode": "rest-fallback"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -267,16 +565,41 @@ def save_complaint():
     try:
         complaint_payload = {
             "issue": data.get("issue"),
-            "details": data.get("details")
+            "details": data.get("details"),
+            "complaint_type": data.get("complaint_type"),
+            "customer_phone": data.get("customer_phone"),
+            "order_history": data.get("order_history"),
+            "payment_done": data.get("payment_done"),
+            "order_id": data.get("order_id")
         }
 
+        # Remove empty fields so older schemas have a better chance of accepting the insert.
+        complaint_payload = {k: v for k, v in complaint_payload.items() if v not in (None, "", [], {})}
+
         if supabase is not None:
-            response = supabase.table("complaints").insert(complaint_payload).execute()
-            return jsonify({"status": "success", "data": response.data})
+            try:
+                response = supabase.table("complaints").insert(complaint_payload).execute()
+                return jsonify({"status": "success", "data": response.data})
+            except Exception as insert_error:
+                # Fallback to the minimum legacy schema if the table has not been migrated yet.
+                legacy_payload = {
+                    "issue": complaint_payload.get("issue"),
+                    "details": complaint_payload.get("details")
+                }
+                response = supabase.table("complaints").insert(legacy_payload).execute()
+                return jsonify({"status": "success", "data": response.data, "warning": str(insert_error)})
 
         # Fallback path when supabase-py client init failed.
-        rest_data = insert_via_rest("complaints", complaint_payload)
-        return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "warning": supabase_error})
+        try:
+            rest_data = insert_via_rest("complaints", complaint_payload)
+            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "warning": supabase_error})
+        except Exception as rest_error:
+            legacy_payload = {
+                "issue": complaint_payload.get("issue"),
+                "details": complaint_payload.get("details")
+            }
+            rest_data = insert_via_rest("complaints", legacy_payload)
+            return jsonify({"status": "success", "data": rest_data, "mode": "rest-fallback", "warning": str(rest_error)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
