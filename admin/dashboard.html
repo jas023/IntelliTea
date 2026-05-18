@@ -130,7 +130,8 @@
                                 <tr class="bg-slate-50">
                                     <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">ID</th>
                                     <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Issue</th>
-                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Details</th>
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Phone</th>
+                                    <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Complaint</th>
                                     <th class="px-5 py-3 text-xs font-bold text-slate-500 uppercase">Created</th>
                                 </tr>
                             </thead>
@@ -154,22 +155,36 @@
             return date.toLocaleString('en-IN');
         }
 
+        function parseComplaintMeta(details) {
+            const text = String(details || '');
+            const phoneMatch = text.match(/Customer phone:\s*([^|\n]+)/i) || text.match(/Phone:\s*([^|\n]+)/i);
+            const orderDetailsMatch = text.match(/Order details:\s*([^|\n]+)/i) || text.match(/Order placed:\s*([^|\n]+)/i) || text.match(/Order ID:\s*([^|\n]+)/i);
+            const complaintMatch = text.match(/Complaint:\s*([^|\n]+(?:\|[^|\n]+)*)/i);
+            return {
+                phone: phoneMatch ? phoneMatch[1].trim() : '-',
+                orderDetails: orderDetailsMatch ? orderDetailsMatch[1].trim() : '-',
+                complaintText: complaintMatch ? complaintMatch[1].trim() : (text ? text.trim() : '-')
+            };
+        }
+
         function renderComplaints(rows) {
             const tableBody = document.getElementById('recentComplaintsBody');
             if (!tableBody) return;
 
             if (!Array.isArray(rows) || rows.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="px-5 py-6 text-sm text-slate-500">No complaints found.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-sm text-slate-500">No complaints found.</td></tr>';
                 return;
             }
 
             tableBody.innerHTML = '';
             rows.forEach(row => {
+                const complaintMeta = parseComplaintMeta(row.details);
                 tableBody.innerHTML += `
                     <tr class="border-b border-primary/5 hover:bg-primary/5">
                         <td class="px-5 py-3 text-sm font-semibold text-primary">#${row.id || '-'}</td>
                         <td class="px-5 py-3 text-sm text-slate-700">${row.issue || '-'}</td>
-                        <td class="px-5 py-3 text-sm text-slate-700">${row.details || '-'}</td>
+                        <td class="px-5 py-3 text-sm text-slate-700">${row.customer_phone || complaintMeta.phone}</td>
+                        <td class="px-5 py-3 text-sm text-slate-700">${complaintMeta.complaintText || '-'}</td>
                         <td class="px-5 py-3 text-sm text-slate-500">${formatCreatedAt(row.created_at)}</td>
                     </tr>
                 `;

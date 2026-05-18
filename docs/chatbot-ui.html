@@ -198,6 +198,7 @@ function resetOrderState() {
   localStorage.removeItem(ORDER_STORAGE.paymentStatus);
   localStorage.removeItem(ORDER_STORAGE.utrNo);
   localStorage.removeItem(ORDER_STORAGE.orderIdempotencyKey);
+  localStorage.removeItem(ORDER_STORAGE.chatSnapshot);
   // Keep customer phone between sessions so users don't need to re-enter it in address.
   localStorage.removeItem(ORDER_STORAGE.repeatPromptShown);
   localStorage.removeItem(ORDER_STORAGE.repeatOrderData);
@@ -346,7 +347,7 @@ async function startRepeatCustomerPrompt() {
     repeatState.awaitingNewAddress = false;
 
     const orderButtons = repeatState.orders.map(order => `[${order._buttonLabel}]`).join(" ");
-    addMessage(`Welcome back! You are our repeating customer. Here are your previous orders. Choose one to repeat or start a fresh order. ${orderButtons} [Start New Order]`, true);
+    addMessage(`Welcome back! You are our repeating customer. Here are your previous orders. Choose one to repeat, raise a complaint, or start a fresh order. ${orderButtons} [Raise Complaint] [Start New Order]`, true);
     return true;
   } catch (error) {
     console.error("Repeat customer prompt failed:", error);
@@ -439,17 +440,18 @@ async function saveOrderWithFallback(payload) {
 }
 
 async function saveComplaintToBackend(issue, details) {
+  const customerPhone = extractPhoneFromText(details) || localStorage.getItem(ORDER_STORAGE.customerPhone) || "";
+  const orderSummary = localStorage.getItem(ORDER_STORAGE.pendingItems) || buildDraftItemsSummary() || "Not available";
+
   const response = await fetch("http://localhost:5000/api/save-complaint", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       issue,
-      details,
-      complaint_type: complaintState.complaintType,
-      customer_phone: localStorage.getItem(ORDER_STORAGE.customerPhone) || null,
-      order_history: localStorage.getItem(ORDER_STORAGE.pendingItems) || buildDraftItemsSummary() || null,
-      payment_done: localStorage.getItem(ORDER_STORAGE.paymentStatus) === "paid" ? true : false,
-      order_id: localStorage.getItem(ORDER_STORAGE.orderId) || null
+      customer_phone: customerPhone || null,
+      order_history: orderSummary,
+      details: details.trim(),
+      complaint_type: complaintState.complaintType
     })
   });
 
@@ -475,6 +477,12 @@ async function saveComplaintToBackend(issue, details) {
 function getOrCreateOrderIdempotencyKey() {
   const existing = localStorage.getItem(ORDER_STORAGE.orderIdempotencyKey);
   if (existing) return existing;
+  const created = (crypto.randomUUID && crypto.randomUUID()) || (`order_${Math.random().toString(16).slice(2)}_${Date.now()}`);
+  localStorage.setItem(ORDER_STORAGE.orderIdempotencyKey, created);
+  return created;
+}
+
+function refreshOrderIdempotencyKey() {
   const created = (crypto.randomUUID && crypto.randomUUID()) || (`order_${Math.random().toString(16).slice(2)}_${Date.now()}`);
   localStorage.setItem(ORDER_STORAGE.orderIdempotencyKey, created);
   return created;
@@ -591,6 +599,9 @@ async function handleSend(buttonText = null) {
   if (!text) return;
 
   if (text === "Raise Complaint") {
+    repeatState.active = false;
+    repeatState.awaitingNewAddress = false;
+    repeatState.selectedOrder = null;
     complaintState.complaintType = null;
     complaintState.awaitingDetails = false;
     addMessage(text, false);
@@ -602,7 +613,7 @@ async function handleSend(buttonText = null) {
     complaintState.complaintType = "order_not_received";
     complaintState.awaitingDetails = true;
     addMessage(text, false);
-    addMessage("Please type your order details, phone number, order history, and whether payment was done. We will save it for admin review.", true);
+    addMessage("Please type your order details and phone number. We will save it for admin review.", true);
     return;
   }
 
@@ -623,7 +634,7 @@ async function handleSend(buttonText = null) {
     complaintState.awaitingDetails = true;
     complaintState.complaintType = "other";
     addMessage(text, false);
-    addMessage("Please type your complaint in detail. We will register it with admin.", true);
+    addMessage("Please type your complaint details and phone number. We will register it with admin.", true);
     return;
   }
 
@@ -641,7 +652,7 @@ async function handleSend(buttonText = null) {
     try {
       const savedIssue = complaintState.complaintType === "order_not_received" ? "order not received" : "other";
       await saveComplaintToBackend(savedIssue, text.trim());
-      addMessage(`Your complaint is registered. If urgent, call admin on ${ADMIN_CONTACT_NUMBER}.`, true);
+      addMessage(`Your complaint is registered. WhatsApp ${ADMIN_CONTACT_NUMBER} for fast process.`, true);
     } catch (error) {
       console.error("Complaint save failed:", error);
       addMessage("Could not register complaint right now due to server/database issue. Please try again shortly.", true);
@@ -666,6 +677,7 @@ async function handleSend(buttonText = null) {
         }
 
         const order = repeatState.selectedOrder;
+        refreshOrderIdempotencyKey();
         const amount = parseFloat(order.amount || 0);
         if (amount > 10) {
           localStorage.setItem(ORDER_STORAGE.total, String(amount));

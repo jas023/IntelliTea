@@ -291,7 +291,7 @@ CONVERSATION FLOW (Follow strictly in order):
 8. CHECKOUT: After they provide their address, say exactly: "Order saved! [Proceed to Payment]"
 
 9. COMPLAINTS: If 'Raise Complaint', ask exactly: "What happened? [Order not received] [Quality issues] [Other]"
-10. If 'Order not received': Ask for the user's complaint details, order number/order history, phone number, and payment status. Then say the complaint is saved for admin review.
+10. If 'Order not received': Ask for the user's order details and phone number only. Do not invent any order number. Then say the complaint is saved for admin review and share this WhatsApp number: 9464364880.
 11. If 'Quality issues': Say "Oh, sorry for that. We will take care of it from the next time."
 12. If 'Other': Ask "Tell me what happened." Wait for reply, then apologize.
 13. If 'Know About': Say exactly: "Read about our history here! [Know About]"
@@ -563,12 +563,27 @@ def confirm_payment():
 def save_complaint():
     data = request.json
     try:
+        complaint_text = str(data.get("details", "")).strip()
+        customer_phone = str(data.get("customer_phone", "")).strip()
+        order_history = str(data.get("order_history", "")).strip()
+
+        structured_details = complaint_text
+        detail_parts = []
+        if customer_phone:
+            detail_parts.append(f"Customer phone: {customer_phone}")
+        if order_history:
+            detail_parts.append(f"Order details: {order_history}")
+        if complaint_text:
+            detail_parts.append(f"Complaint: {complaint_text}")
+        if detail_parts:
+            structured_details = " | ".join(detail_parts)
+
         complaint_payload = {
             "issue": data.get("issue"),
-            "details": data.get("details"),
+            "details": structured_details,
             "complaint_type": data.get("complaint_type"),
-            "customer_phone": data.get("customer_phone"),
-            "order_history": data.get("order_history"),
+            "customer_phone": customer_phone or None,
+            "order_history": order_history or None,
             "payment_done": data.get("payment_done"),
             "order_id": data.get("order_id")
         }
@@ -614,24 +629,40 @@ def get_complaints():
             limit = 20
 
         if supabase is not None:
-            response = supabase.table("complaints") \
-                .select("id,issue,details,created_at", count="exact") \
-                .order("created_at", desc=True) \
-                .limit(limit) \
-                .execute()
+            try:
+                response = supabase.table("complaints") \
+                    .select("id,issue,details,complaint_type,customer_phone,order_history,payment_done,order_id,created_at", count="exact") \
+                    .order("created_at", desc=True) \
+                    .limit(limit) \
+                    .execute()
+            except Exception:
+                response = supabase.table("complaints") \
+                    .select("id,issue,details,created_at", count="exact") \
+                    .order("created_at", desc=True) \
+                    .limit(limit) \
+                    .execute()
             return jsonify({
                 "status": "success",
                 "data": response.data or [],
                 "count": response.count or 0
             })
 
-        rows, count = fetch_via_rest(
-            "complaints",
-            select_cols="id,issue,details,created_at",
-            limit=limit,
-            order_by="created_at",
-            ascending=False
-        )
+        try:
+            rows, count = fetch_via_rest(
+                "complaints",
+                select_cols="id,issue,details,complaint_type,customer_phone,order_history,payment_done,order_id,created_at",
+                limit=limit,
+                order_by="created_at",
+                ascending=False
+            )
+        except Exception:
+            rows, count = fetch_via_rest(
+                "complaints",
+                select_cols="id,issue,details,created_at",
+                limit=limit,
+                order_by="created_at",
+                ascending=False
+            )
         return jsonify({
             "status": "success",
             "data": rows or [],

@@ -212,23 +212,31 @@
                 tableBody.innerHTML = '<tr><td colspan="7" class="p-10 text-center">No orders found in database.</td></tr>';
             }
 
-           const phoneCounts = {};
-           orders.forEach(order => {
-               const phone = order.customer_phone || extractPhone(order.address);
-               if (phone) {
-                   phoneCounts[phone] = (phoneCounts[phone] || 0) + 1;
-               }
-           });
+           const firstOrderByPhone = {};
+           [...orders]
+               .slice()
+               .sort((a, b) => {
+                   const timeA = new Date(a.created_at || 0).getTime();
+                   const timeB = new Date(b.created_at || 0).getTime();
+                   if (timeA !== timeB) return timeA - timeB;
+                   return Number(a.id || 0) - Number(b.id || 0);
+               })
+               .forEach(order => {
+                   const phone = order.customer_phone || extractPhone(order.address);
+                   if (phone && !firstOrderByPhone[phone]) {
+                       firstOrderByPhone[phone] = order.id;
+                   }
+               });
 
             orders.forEach(order => {
         const fulfillmentStatus = normalizeOrderStatus(order.status);
         const paymentStatus = normalizePaymentStatus(order);
     const utrNo = order.utr_no || '-';
     const phone = order.customer_phone || extractPhone(order.address);
-    const isRepeat = phone && phoneCounts[phone] > 1;
+    const isRepeat = phone && firstOrderByPhone[phone] && String(firstOrderByPhone[phone]) !== String(order.id);
     const customerBadge = isRepeat
         ? '<span class="inline-block ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-700">Repeat</span>'
-        : '<span class="inline-block ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-600">New</span>';
+        : '';
     const row = `
         <tr class="hover:bg-primary/5 transition-colors border-b border-primary/5">
             <td class="px-6 py-4 whitespace-nowrap font-bold text-primary">#${order.id}</td>
